@@ -1,0 +1,59 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Build output
+bin/
+build/
+obj/
+
+# Dependency directories
+vendor/
+Godeps/
+
+# Go workspace file
+.go_workspace
+
+# IDE/editor folders
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# MacOS Finder folder attributes
+.DS_Store
+
+# Node modules (if you use Node.js for frontend)
+node_modules/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Coverage reports
+coverage.out
+*.cover
+*.cov
+*.coverage
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+*.lock
+*.pid
+
+# VSCode settings
+.vscode/settings.json
+
+image
