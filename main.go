@@ -13,6 +13,10 @@ func main() {
 
 	// Set up the router
 	r := gin.Default()
+
+	// Serve static files from the "public/images" directory
+	r.Static("/images", "./public/images")
+
 	routes.SetupRoutes(r)
 
 	// Start the server

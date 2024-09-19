@@ -2,7 +2,9 @@ package repository
 
 import (
 	"api-server/config"
+	"api-server/helpers"
 	"api-server/models"
+	"api-server/repository/validation"
 	"database/sql"
 	"log"
 )
@@ -11,8 +13,10 @@ import (
 func GetAllUsers(limit, offset int) ([]models.User, error) {
 	var users []models.User
 
-	// Query to select all users with limit and offset for pagination
-	rows, err := config.DB.Query("SELECT id, full_name, email, password, role, likes, dislikes FROM users LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := config.DB.Query(
+		"SELECT id, full_name, email, password, role, likes, dislikes, image FROM users LIMIT $1 OFFSET $2",
+		limit, offset,
+	)
 	if err != nil {
 		log.Println("Error querying users:", err)
 		return nil, err
@@ -21,7 +25,7 @@ func GetAllUsers(limit, offset int) ([]models.User, error) {
 
 	for rows.Next() {
 		var user models.User
-		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Password, &user.Role, &user.Likes, &user.Dislikes); err != nil {
+		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Password, &user.Role, &user.Likes, &user.Dislikes, &user.Image); err != nil {
 			log.Println("Error scanning user:", err)
 			return nil, err
 		}
@@ -36,7 +40,7 @@ func GetAllUsers(limit, offset int) ([]models.User, error) {
 	return users, nil
 }
 
-// GetUsersCount retrieves the total number of users for pagination calculations
+// GetUsersCount retrieves the total number of users
 func GetUsersCount() (int, error) {
 	var count int
 
@@ -67,10 +71,25 @@ func GetUserByID(id uint) (*models.User, error) {
 	return &user, nil
 }
 
-// CreateUser inserts a new user into the database
+// CreateUser inserts a new user into the database with an optional image path
 func CreateUser(user *models.User) error {
-	_, err := config.DB.Exec("INSERT INTO users (full_name, email, password, role, likes, dislikes) VALUES ($1, $2, $3, $4, $5, $6)",
-		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes)
+	// Perform validation before insertion
+	if err := validation.ValidateUser(user); err != nil {
+		return err
+	}
+
+	// Hash the user's password before saving to the database
+	hashedPassword, err := helpers.HashingPasswordFunc(user.Password)
+	if err != nil {
+		return err
+	}
+	user.Password = hashedPassword
+	log.Println("Inserting user:", user)
+	// Insert the user into the database, including the image path
+	_, err = config.DB.Exec(
+		"INSERT INTO users (full_name, email, password, role, likes, dislikes, image) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, user.Image,
+	)
 	if err != nil {
 		log.Println("Error inserting user:", err)
 		return err
@@ -81,8 +100,15 @@ func CreateUser(user *models.User) error {
 
 // UpdateUser updates an existing user by ID in the database
 func UpdateUser(id uint, user *models.User) error {
-	_, err := config.DB.Exec("UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, likes = $5, dislikes = $6 WHERE id = $7",
-		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, id)
+	// Perform validation before updating
+	if err := validation.ValidateUser(user); err != nil {
+		return err
+	}
+
+	_, err := config.DB.Exec(
+		"UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, likes = $5, dislikes = $6 WHERE id = $7",
+		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, id,
+	)
 	if err != nil {
 		log.Println("Error updating user:", err)
 		return err

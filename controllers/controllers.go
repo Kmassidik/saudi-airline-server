@@ -1,9 +1,16 @@
 package controllers
 
 import (
+	"api-server/helpers"
 	"api-server/models"
 	"api-server/repository"
+	"api-server/repository/validation"
+	"api-server/services"
+	"io"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -27,7 +34,7 @@ func GetUsersHandler(c *gin.Context) {
 
 	offset := (page - 1) * limit
 
-	users, err := repository.GetAllUsers(limit, offset)
+	users, err := services.GetAllUsers(limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve users",
@@ -65,7 +72,7 @@ func GetUserHandler(c *gin.Context) {
 		return
 	}
 
-	user, err := repository.GetUserByID(uint(userID))
+	user, err := services.GetUserByID(uint(userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
 		return
@@ -79,21 +86,79 @@ func GetUserHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
-// CreateUserHandler creates a new user
+// CreateUserHandler creates a new user and handles image upload
 func CreateUserHandler(c *gin.Context) {
-	var user models.User
-	if err := c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	// Parse the form data, including files
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form"})
 		return
 	}
 
-	err := repository.CreateUser(&user)
+	// Extract form data
+	fullName := c.Request.FormValue("full_name")
+	email := c.Request.FormValue("email")
+	password := c.Request.FormValue("password")
+	role := c.Request.FormValue("role")
+
+	// Create a user struct with the extracted form data
+	user := models.User{
+		FullName: fullName,
+		Email:    email,
+		Password: password,
+		Role:     role,
+	}
+
+	// Handle file upload if present
+	fileHeader, err := c.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		if err != http.ErrMissingFile {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload"})
+			return
+		}
+		// No file uploaded, continue with user creation without image
+	} else {
+		// Generate a unique filename and save the file
+		fileName := helpers.GenerateFileName()
+		filePath := filepath.Join("public/images", fileName)
+		file, err := fileHeader.Open()
+		if err != nil {
+			log.Println("Error opening file:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+			return
+		}
+		defer file.Close()
+
+		dst, err := os.Create(filePath)
+		if err != nil {
+			log.Println("Error creating file:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+			return
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, file); err != nil {
+			log.Println("Error saving file:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+			return
+		}
+
+		// Update user image path
+		user.Image = fileName
+	}
+
+	// Validate user details before processing
+	if err := validation.ValidateUser(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully", "user": user})
+	// Call service layer to handle user creation
+	if err := services.CreateUser(&user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
 }
 
 // UpdateUserHandler updates an existing user by ID
@@ -113,7 +178,7 @@ func UpdateUserHandler(c *gin.Context) {
 		return
 	}
 
-	err = repository.UpdateUser(uint(userID), &user)
+	err = services.UpdateUser(uint(userID), &user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
@@ -133,7 +198,7 @@ func DeleteUserHandler(c *gin.Context) {
 		return
 	}
 
-	err = repository.DeleteUser(uint(userID))
+	err = services.DeleteUser(uint(userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return

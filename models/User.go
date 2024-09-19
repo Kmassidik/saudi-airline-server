@@ -1,11 +1,12 @@
 package models
 
 type User struct {
-	ID       uint // Consider if uint is preferred, int could also work
-	FullName string
-	Email    string
-	Password string
-	Role     string
-	Likes    uint // Changed from 'Like' to 'Likes' (plural for clarity)
-	Dislikes uint // Changed from 'Dislike' to 'Dislikes'
+	ID       uint   // FIXME: make Gin skip mapping this field!
+	FullName string `form:"full_name"`
+	Email    string `form:"email"`
+	Password string `form:"password"`
+	Role     string `form:"role"`
+	Likes    uint   `form:"likes"`
+	Dislikes uint   `form:"dislikes"`
+	Image    string `form:"image"`
 }
