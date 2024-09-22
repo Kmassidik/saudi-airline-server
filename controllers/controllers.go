@@ -307,7 +307,7 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 	var logo string
 
 	if err == nil {
-		// Handle the file upload
+		// Handle the file upload if a new file is provided
 		fileName := filepath.Base(fileHeader.Filename)
 		filePath := filepath.Join("public/assets", fileName)
 		file, err := fileHeader.Open()
@@ -330,9 +330,12 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 		}
 
 		logo = fileName // Store the filename for the logo
+	} else {
+		// No new image uploaded, use the old image path
+		logo = oldImagePath
 	}
 
-	// Delete the old image if it exists and a new image was uploaded
+	// Delete the old image if a new one is uploaded and it's different
 	if oldImagePath != "" && logo != "" && oldImagePath != logo {
 		oldImageFullPath := filepath.Join("public/assets", oldImagePath) // Use the correct path
 		if err := os.Remove(oldImageFullPath); err != nil {

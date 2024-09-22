@@ -48,6 +48,6 @@ func SetupRoutes(r *gin.Engine) {
 	companyProfileRoutes := r.Group("/company_profiles")
 	{
 		companyProfileRoutes.GET("", controllers.GetCompanyProfileHandler)
-		companyProfileRoutes.PUT("/:id", controllers.UpdateCompanyProfileHandler)
+		companyProfileRoutes.PUT("", controllers.UpdateCompanyProfileHandler)
 	}
 }

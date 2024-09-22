@@ -16,7 +16,6 @@ func SetDB(database *sql.DB) {
 }
 
 // GetCompanyProfile fetches the company profile from the database
-// GetCompanyProfile retrieves a company profile by ID
 func GetCompanyProfile() (*models.CompanyProfile, error) {
 	var company models.CompanyProfile
 
@@ -41,12 +40,19 @@ func GetCompanyProfile() (*models.CompanyProfile, error) {
 
 // UpdateCompanyProfile updates the company profile in the database
 func UpdateCompanyProfile(id uint, name string, logo string) error {
-	query := `UPDATE company_profiles SET name = $1, logo = $2 WHERE id = $3`
-	_, err := db.Exec(query, name, logo, id)
+	// query := `UPDATE company_profiles SET name = $1, logo = $2 WHERE id = $3`
+	// _, err := db.Exec(query, name, logo, id)
+	// if err != nil {
+	// 	log.Println("Error updating company profile:", err)
+	// 	return err
+	// }
+	var query string
+
+	query = "UPDATE company_profiles SET name = $1, logo = $2 WHERE id = $3"
+	_, err := config.DB.Exec(query, name, logo, id)
 	if err != nil {
-		log.Println("Error updating company profile:", err)
+		log.Println("Error updating user:", err)
 		return err
 	}
-
 	return nil
 }
