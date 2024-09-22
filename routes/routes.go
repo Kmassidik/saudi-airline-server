@@ -47,10 +47,7 @@ func SetupRoutes(r *gin.Engine) {
 	// CompanyProfile routes
 	companyProfileRoutes := r.Group("/company_profiles")
 	{
-		companyProfileRoutes.GET("", controllers.GetCompanyProfilesHandler)
-		companyProfileRoutes.GET("/:id", controllers.GetCompanyProfileHandler)
-		companyProfileRoutes.POST("", controllers.CreateCompanyProfileHandler)
+		companyProfileRoutes.GET("", controllers.GetCompanyProfileHandler)
 		companyProfileRoutes.PUT("/:id", controllers.UpdateCompanyProfileHandler)
-		companyProfileRoutes.DELETE("/:id", controllers.DeleteCompanyProfileHandler)
 	}
 }

@@ -64,7 +64,8 @@ func main() {
 	CREATE TABLE IF NOT EXISTS branch_offices (
 		id SERIAL PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
-		address TEXT
+		address TEXT,
+		total_counter INT DEFAULT 0
 	);
 
 	CREATE TABLE IF NOT EXISTS branch_counters (

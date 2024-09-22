@@ -18,7 +18,6 @@ import (
 
 // User Handlers
 
-// GetUsersHandler handles the request to get a list of users with pagination
 func GetUsersHandler(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "20")
@@ -27,6 +26,7 @@ func GetUsersHandler(c *gin.Context) {
 	if err != nil || page < 1 {
 		page = 1
 	}
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 		limit = 20
@@ -34,19 +34,17 @@ func GetUsersHandler(c *gin.Context) {
 
 	offset := (page - 1) * limit
 
+	// Use the service layer to get the users
 	users, err := services.GetAllUsers(limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve users",
-		})
+		c.Error(err) // Pass error to the middleware
 		return
 	}
 
+	// Fetch the total user count
 	totalCount, err := repository.GetUsersCount()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve users count",
-		})
+		c.Error(err) // Pass error to the middleware
 		return
 	}
 
@@ -61,11 +59,8 @@ func GetUsersHandler(c *gin.Context) {
 	})
 }
 
-// GetUserHandler retrieves a single user by ID
 func GetUserHandler(c *gin.Context) {
 	id := c.Param("id")
-
-	// Convert id to integer if necessary
 	userID, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -74,7 +69,7 @@ func GetUserHandler(c *gin.Context) {
 
 	user, err := services.GetUserByID(uint(userID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		c.Error(err) // Pass error to the middleware
 		return
 	}
 
@@ -83,24 +78,20 @@ func GetUserHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, user)
 }
 
-// CreateUserHandler creates a new user and handles image upload
 func CreateUserHandler(c *gin.Context) {
-	// Parse the form data, including files
 	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form"})
 		return
 	}
 
-	// Extract form data
 	fullName := c.Request.FormValue("full_name")
 	email := c.Request.FormValue("email")
 	password := c.Request.FormValue("password")
 	role := c.Request.FormValue("role")
 
-	// Create a user struct with the extracted form data
 	user := models.User{
 		FullName: fullName,
 		Email:    email,
@@ -108,103 +99,254 @@ func CreateUserHandler(c *gin.Context) {
 		Role:     role,
 	}
 
-	// Handle file upload if present
+	// Handle file upload
 	fileHeader, err := c.FormFile("image")
-	if err != nil {
-		if err != http.ErrMissingFile {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload"})
-			return
-		}
-		// No file uploaded, continue with user creation without image
-	} else {
-		// Generate a unique filename and save the file
+	if err == nil {
+		// If there's a file, handle the file upload
 		fileName := helpers.GenerateFileName()
 		filePath := filepath.Join("public/images", fileName)
 		file, err := fileHeader.Open()
 		if err != nil {
-			log.Println("Error opening file:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+			c.Error(err) // Pass error to the middleware
 			return
 		}
 		defer file.Close()
 
 		dst, err := os.Create(filePath)
 		if err != nil {
-			log.Println("Error creating file:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+			c.Error(err) // Pass error to the middleware
 			return
 		}
 		defer dst.Close()
 
 		if _, err := io.Copy(dst, file); err != nil {
-			log.Println("Error saving file:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+			c.Error(err) // Pass error to the middleware
 			return
 		}
 
-		// Update user image path
 		user.Image = fileName
 	}
 
-	// Validate user details before processing
+	// Validate user
 	if err := validation.ValidateUser(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Call service layer to handle user creation
+	// Call service to create user
 	if err := services.CreateUser(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err) // Pass error to the middleware
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
 }
 
-// UpdateUserHandler updates an existing user by ID
 func UpdateUserHandler(c *gin.Context) {
 	id := c.Param("id")
-
-	// Convert id to integer if necessary
 	userID, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
-	var user models.User
-	if err := c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	// Parse the form for multipart data
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form"})
 		return
 	}
 
-	err = services.UpdateUser(uint(userID), &user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+	// Retrieve form data
+	fullName := c.Request.FormValue("full_name")
+	email := c.Request.FormValue("email")
+	password := c.Request.FormValue("password")
+	role := c.Request.FormValue("role")
+
+	// Find existing user
+	user, err := services.GetUserByID(uint(userID))
+	if err != nil || user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
+	}
+
+	// Store the current image path
+	oldImagePath := user.Image
+
+	// Update fields
+	user.FullName = fullName
+	user.Email = email
+	if password != "" {
+		user.Password = password // Only update if password is provided
+	}
+	user.Role = role
+
+	// Handle file upload
+	fileHeader, err := c.FormFile("image")
+	if err == nil {
+		// If there's a file, handle the file upload
+		fileName := helpers.GenerateFileName() // Ensure this generates just the filename
+		filePath := filepath.Join("public/images", fileName)
+		file, err := fileHeader.Open()
+		if err != nil {
+			c.Error(err)
+			return
+		}
+		defer file.Close()
+
+		dst, err := os.Create(filePath)
+		if err != nil {
+			c.Error(err)
+			return
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, file); err != nil {
+			c.Error(err)
+			return
+		}
+
+		// Update the user's image field
+		user.Image = fileName // Store just the filename
+	}
+
+	// Validate user
+	if err := validation.ValidateUser(user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Call service to update user
+	if err := services.UpdateUser(uint(userID), user); err != nil {
+		c.Error(err)
+		return
+	}
+
+	// Delete the old image if it exists and a new image was uploaded
+	if user.Image != oldImagePath && oldImagePath != "" {
+		oldImageFullPath := filepath.Join("public/images", oldImagePath) // Use the correct path
+		if err := os.Remove(oldImageFullPath); err != nil {
+			log.Println("Error deleting old image:", err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
-// DeleteUserHandler deletes a user by ID
 func DeleteUserHandler(c *gin.Context) {
 	id := c.Param("id")
-
-	// Convert id to integer if necessary
 	userID, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
-	err = services.DeleteUser(uint(userID))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+	// Find existing user
+	user, err := services.GetUserByID(uint(userID))
+	if err != nil || user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
+	// Store the image path for deletion
+	imagePath := user.Image
+
+	// Delete the user from the database
+	if err := services.DeleteUser(uint(user.ID)); err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	// Delete the user's image file from the filesystem
+	if imagePath != "" {
+		oldImageFullPath := filepath.Join("public/images", imagePath) // Adjust the path as needed
+		if err := os.Remove(oldImageFullPath); err != nil {
+			log.Println("Error deleting user image:", err)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+}
+
+// CompanyProfile Handlers
+func GetCompanyProfileHandler(c *gin.Context) {
+	// Get the company profile
+	company, err := services.GetCompanyProfile()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get company profile"})
+		return
+	}
+
+	if company == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Company profile not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, company)
+}
+
+func UpdateCompanyProfileHandler(c *gin.Context) {
+	// Get the current company profile
+	company, err := services.GetCompanyProfile() // Fetch company profile with ID 1
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	// Store the current image path
+	oldImagePath := company.Logo
+
+	// Parse the form for multipart data
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form"})
+		return
+	}
+
+	// Retrieve form data
+	name := c.Request.FormValue("name")
+	fileHeader, err := c.FormFile("logo")
+	var logo string
+
+	if err == nil {
+		// Handle the file upload
+		fileName := filepath.Base(fileHeader.Filename)
+		filePath := filepath.Join("public/assets", fileName)
+		file, err := fileHeader.Open()
+		if err != nil {
+			c.Error(err)
+			return
+		}
+		defer file.Close()
+
+		dst, err := os.Create(filePath)
+		if err != nil {
+			c.Error(err)
+			return
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, file); err != nil {
+			c.Error(err)
+			return
+		}
+
+		logo = fileName // Store the filename for the logo
+	}
+
+	// Delete the old image if it exists and a new image was uploaded
+	if oldImagePath != "" && logo != "" && oldImagePath != logo {
+		oldImageFullPath := filepath.Join("public/assets", oldImagePath) // Use the correct path
+		if err := os.Remove(oldImageFullPath); err != nil {
+			log.Println("Error deleting old image:", err)
+		}
+	}
+
+	// Call service to update company profile with ID 1
+	if err := services.UpdateCompanyProfile(name, logo); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update company profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Company profile updated successfully"})
 }
 
 // BranchOffice Handlers
@@ -265,34 +407,4 @@ func DeleteBranchCounterHandler(c *gin.Context) {
 	id := c.Param("id")
 	// Implement logic to delete a branch counter by ID
 	c.JSON(http.StatusOK, gin.H{"message": "Delete branch counter", "id": id})
-}
-
-// CompanyProfile Handlers
-
-func GetCompanyProfilesHandler(c *gin.Context) {
-	// Implement logic to retrieve company profiles
-	c.JSON(http.StatusOK, gin.H{"message": "Get all company profiles"})
-}
-
-func GetCompanyProfileHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to retrieve a company profile by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Get company profile", "id": id})
-}
-
-func CreateCompanyProfileHandler(c *gin.Context) {
-	// Implement logic to create a new company profile
-	c.JSON(http.StatusOK, gin.H{"message": "Create company profile"})
-}
-
-func UpdateCompanyProfileHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to update a company profile by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Update company profile", "id": id})
-}
-
-func DeleteCompanyProfileHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to delete a company profile by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Delete company profile", "id": id})
 }

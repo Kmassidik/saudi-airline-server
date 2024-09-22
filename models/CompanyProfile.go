@@ -1,7 +1,6 @@
-package models // Suggest using 'entities' instead of 'entitys'
+package models
 
 type CompanyProfile struct {
-	ID   uint
-	Name string
-	Logo string
+	Name string `json:"name"`
+	Logo string `json:"logo"`
 }

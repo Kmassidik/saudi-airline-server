@@ -8,8 +8,16 @@ import (
 
 // ValidateUser validates the input for the User model
 func ValidateUser(user *models.User) error {
-	if user.FullName == "" || user.Email == "" || user.Password == "" {
-		return errors.New("full name, email, and password cannot be empty")
+	if user.FullName == "" {
+		return errors.New("full name cannot be empty")
+	}
+
+	if user.Email == "" {
+		return errors.New("email cannot be empty")
+	}
+
+	if user.Password == "" {
+		return errors.New("password cannot be empty")
 	}
 
 	if len(user.FullName) < 3 {

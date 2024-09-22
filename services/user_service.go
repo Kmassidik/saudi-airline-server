@@ -6,7 +6,7 @@ import (
 )
 
 // GetAllUsers retrieves all users with pagination
-func GetAllUsers(limit, offset int) ([]models.User, error) {
+func GetAllUsers(limit, offset int) ([]models.AllUserResponse, error) {
 	return repository.GetAllUsers(limit, offset)
 }
 

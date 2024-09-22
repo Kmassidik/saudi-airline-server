@@ -6,15 +6,16 @@ import (
 	"api-server/models"
 	"api-server/repository/validation"
 	"database/sql"
+	"errors"
 	"log"
 )
 
 // GetAllUsers retrieves all users from the database with pagination
-func GetAllUsers(limit, offset int) ([]models.User, error) {
-	var users []models.User
+func GetAllUsers(limit, offset int) ([]models.AllUserResponse, error) {
+	var users []models.AllUserResponse
 
 	rows, err := config.DB.Query(
-		"SELECT id, full_name, email, password, role, likes, dislikes, image FROM users LIMIT $1 OFFSET $2",
+		"SELECT id, full_name, email, role, likes, dislikes, image FROM users LIMIT $1 OFFSET $2",
 		limit, offset,
 	)
 	if err != nil {
@@ -24,11 +25,13 @@ func GetAllUsers(limit, offset int) ([]models.User, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var user models.User
-		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Password, &user.Role, &user.Likes, &user.Dislikes, &user.Image); err != nil {
+		var user models.AllUserResponse
+
+		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image); err != nil {
 			log.Println("Error scanning user:", err)
 			return nil, err
 		}
+
 		users = append(users, user)
 	}
 
@@ -58,8 +61,11 @@ func GetUsersCount() (int, error) {
 func GetUserByID(id uint) (*models.User, error) {
 	var user models.User
 
-	row := config.DB.QueryRow("SELECT id, full_name, email, password, role, likes, dislikes FROM users WHERE id = $1", id)
-	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Password, &user.Role, &user.Likes, &user.Dislikes)
+	// Query to retrieve the user by ID
+	row := config.DB.QueryRow("SELECT id, full_name, email, role, likes, dislikes, image FROM users WHERE id = $1", id)
+	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image) // Scan the image name into imageName
+
+	// If no rows are found
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // No user found with this ID
@@ -68,6 +74,7 @@ func GetUserByID(id uint) (*models.User, error) {
 		return nil, err
 	}
 
+	// Return the user object directly (not wrapped in another object)
 	return &user, nil
 }
 
@@ -105,15 +112,35 @@ func UpdateUser(id uint, user *models.User) error {
 		return err
 	}
 
-	_, err := config.DB.Exec(
-		"UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, likes = $5, dislikes = $6 WHERE id = $7",
-		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, id,
-	)
-	if err != nil {
-		log.Println("Error updating user:", err)
-		return err
+	// Hash the password if it's not empty (meaning it's being updated)
+	if user.Password != "" {
+		hashedPassword, err := helpers.HashingPasswordFunc(user.Password)
+		if err != nil {
+			log.Println("Error hashing password:", err)
+			return errors.New("failed to hash password")
+		}
+		user.Password = string(hashedPassword) // Store the hashed password
 	}
 
+	// Prepare the SQL query
+	var query string
+	if user.Image != "" {
+		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, likes = $5, dislikes = $6, image = $7 WHERE id = $8"
+		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, user.Image, id)
+		if err != nil {
+			log.Println("Error updating user:", err)
+			return err
+		}
+	} else {
+		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, likes = $5, dislikes = $6 WHERE id = $7"
+		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, id)
+		if err != nil {
+			log.Println("Error updating user:", err)
+			return err
+		}
+	}
+
+	// No need to query the database again to get the existing image
 	return nil
 }
 
