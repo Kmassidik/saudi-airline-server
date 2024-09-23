@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	// Load environment variables from .env file located outside the migration folder
-	err := godotenv.Load(".env") // Adjust the path according to your folder structure
+	// Load environment variables from .env file
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
@@ -22,9 +22,9 @@ func main() {
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 	dbSslMode := os.Getenv("DB_SSLMODE")
-	dbHost := os.Getenv("DB_HOST") // Added host
+	dbHost := os.Getenv("DB_HOST") // Host of the PostgreSQL server
 
-	// Define the connection string for PostgreSQL (initially connecting to default database)
+	// Connect to default PostgreSQL database
 	connStr := fmt.Sprintf("user=%s password=%s dbname=postgres sslmode=%s host=%s", dbUser, dbPassword, dbSslMode, dbHost)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -40,7 +40,7 @@ func main() {
 		}
 	}
 
-	// Connect to the newly created database
+	// Connect to the new database
 	connStr = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s host=%s", dbUser, dbPassword, dbName, dbSslMode, dbHost)
 	db, err = sql.Open("postgres", connStr)
 	if err != nil {
@@ -48,8 +48,17 @@ func main() {
 	}
 	defer db.Close()
 
-	// Define the migration SQL script
+	// Define the SQL migration script
 	migrationSQL := `
+	CREATE TABLE IF NOT EXISTS branch_offices (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		address TEXT,
+		total_counter INT DEFAULT 0,
+		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		full_name VARCHAR(255) NOT NULL,
@@ -58,14 +67,11 @@ func main() {
 		image VARCHAR(255),
 		role VARCHAR(50),
 		likes INT DEFAULT 0,
-		dislikes INT DEFAULT 0
-	);
-
-	CREATE TABLE IF NOT EXISTS branch_offices (
-		id SERIAL PRIMARY KEY,
-		name VARCHAR(255) NOT NULL,
-		address TEXT,
-		total_counter INT DEFAULT 0
+		dislikes INT DEFAULT 0,
+		branch_id INT NOT NULL,
+		FOREIGN KEY (branch_id) REFERENCES branch_offices(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
 	CREATE TABLE IF NOT EXISTS branch_counters (
@@ -74,14 +80,48 @@ func main() {
 		user_id INT NOT NULL,
 		branch_id INT NOT NULL,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
-		FOREIGN KEY (branch_id) REFERENCES branch_offices(id) ON DELETE CASCADE ON UPDATE CASCADE
+		FOREIGN KEY (branch_id) REFERENCES branch_offices(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
 	CREATE TABLE IF NOT EXISTS company_profiles (
 		id SERIAL PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
-		logo TEXT
+		logo TEXT,
+		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
+
+	-- Create function to automatically update 'updatedAt' timestamp
+	CREATE OR REPLACE FUNCTION update_timestamp_column()
+	RETURNS TRIGGER AS $$
+	BEGIN
+		NEW.updatedAt = NOW();
+		RETURN NEW;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	-- Create triggers to update 'updatedAt' on row update for all tables
+	CREATE TRIGGER update_users_updatedAt
+	BEFORE UPDATE ON users
+	FOR EACH ROW
+	EXECUTE FUNCTION update_timestamp_column();
+
+	CREATE TRIGGER update_branch_offices_updatedAt
+	BEFORE UPDATE ON branch_offices
+	FOR EACH ROW
+	EXECUTE FUNCTION update_timestamp_column();
+
+	CREATE TRIGGER update_branch_counters_updatedAt
+	BEFORE UPDATE ON branch_counters
+	FOR EACH ROW
+	EXECUTE FUNCTION update_timestamp_column();
+
+	CREATE TRIGGER update_company_profiles_updatedAt
+	BEFORE UPDATE ON company_profiles
+	FOR EACH ROW
+	EXECUTE FUNCTION update_timestamp_column();
 	`
 
 	// Execute the migration script
@@ -104,7 +144,7 @@ func databaseExists(db *sql.DB, dbName string) bool {
 	return rows.Next()
 }
 
-// createDatabase creates a new database
+// Create Database creates a new database
 func createDatabase(db *sql.DB, dbName string) error {
 	_, err := db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {

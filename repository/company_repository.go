@@ -40,12 +40,6 @@ func GetCompanyProfile() (*models.CompanyProfile, error) {
 
 // UpdateCompanyProfile updates the company profile in the database
 func UpdateCompanyProfile(id uint, name string, logo string) error {
-	// query := `UPDATE company_profiles SET name = $1, logo = $2 WHERE id = $3`
-	// _, err := db.Exec(query, name, logo, id)
-	// if err != nil {
-	// 	log.Println("Error updating company profile:", err)
-	// 	return err
-	// }
 	var query string
 
 	query = "UPDATE company_profiles SET name = $1, logo = $2 WHERE id = $3"

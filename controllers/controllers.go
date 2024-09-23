@@ -354,32 +354,133 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 
 // BranchOffice Handlers
 
+// GetBranchOfficesHandler retrieves all branch offices with pagination
 func GetBranchOfficesHandler(c *gin.Context) {
-	// Implement logic to retrieve branch offices
-	c.JSON(http.StatusOK, gin.H{"message": "Get all branch offices"})
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "20")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 20
+	}
+
+	offset := (page - 1) * limit
+
+	// Use the service layer to get the branch offices
+	branchOffices, err := services.GetAllBranchOffices(limit, offset)
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	// Fetch the total branch office count
+	totalCount, err := repository.GetBranchOfficesCount()
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	totalPages := (totalCount + limit - 1) / limit
+
+	c.JSON(http.StatusOK, gin.H{
+		"page":           page,
+		"limit":          limit,
+		"total_pages":    totalPages,
+		"total_count":    totalCount,
+		"branch_offices": branchOffices,
+	})
 }
 
+// GetBranchOfficeHandler retrieves a single branch office by ID
 func GetBranchOfficeHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to retrieve a branch office by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Get branch office", "id": id})
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
+		return
+	}
+
+	branchOffice, err := services.GetBranchOfficeByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Branch office not found"})
+		return
+	}
+
+	if branchOffice == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Branch office not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, branchOffice)
 }
 
+// CreateBranchOfficeHandler creates a new branch office
 func CreateBranchOfficeHandler(c *gin.Context) {
-	// Implement logic to create a new branch office
-	c.JSON(http.StatusOK, gin.H{"message": "Create branch office"})
+	var branchOffice models.BranchOffice
+
+	if err := c.BindJSON(&branchOffice); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate branch offices
+	if err := validation.ValidateBranchOffices(&branchOffice); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Call service to create user
+	if err := services.CreateBranchOffice(&branchOffice); err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Branch office created successfully"})
 }
 
+// UpdateBranchOfficeHandler updates an existing branch office by ID
 func UpdateBranchOfficeHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to update a branch office by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Update branch office", "id": id})
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
+		return
+	}
+
+	var branchOffice models.BranchOffice
+	if err := c.ShouldBindJSON(&branchOffice); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if err := services.UpdateBranchOffice(uint(id), &branchOffice); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update branch office"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch office updated successfully"})
 }
 
+// DeleteBranchOfficeHandler deletes a branch office by ID
 func DeleteBranchOfficeHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to delete a branch office by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Delete branch office", "id": id})
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
+		return
+	}
+
+	if err := services.DeleteBranchOffice(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete branch office"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch office deleted successfully"})
 }
 
 // BranchCounter Handlers
