@@ -3,16 +3,15 @@ package repository
 import (
 	"api-server/config"
 	"api-server/models"
-	"api-server/repository/validation"
 	"errors"
 	"log"
 )
 
 // GetAllBranchOffices retrieves all branch offices with pagination
-func GetAllBranchOffices(limit, offset int) ([]models.BranchOffice, error) {
-	var branchOffices []models.BranchOffice
+func GetAllBranchOffices(limit, offset int) ([]models.BranchOfficeResponse, error) {
+	var branchOffices []models.BranchOfficeResponse
 
-	rows, err := config.DB.Query("SELECT id, name, address, total_counter FROM branch_offices LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := config.DB.Query("SELECT id, name, address, total_counter FROM branch_offices ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
 		log.Println("Error querying branch offices:", err)
 		return nil, err
@@ -20,7 +19,7 @@ func GetAllBranchOffices(limit, offset int) ([]models.BranchOffice, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var branchOffice models.BranchOffice
+		var branchOffice models.BranchOfficeResponse
 		if err := rows.Scan(&branchOffice.ID, &branchOffice.Name, &branchOffice.Address, &branchOffice.TotalCounter); err != nil {
 			log.Println("Error scanning branch office:", err)
 			return nil, err
@@ -44,8 +43,8 @@ func GetBranchOfficesCount() (int, error) {
 }
 
 // GetBranchOfficesById retrieves a branch office by its ID
-func GetBranchOfficesById(id uint) (*models.BranchOffice, error) {
-	var branchOffice models.BranchOffice
+func GetBranchOfficesById(id uint) (*models.BranchOfficeResponse, error) {
+	var branchOffice models.BranchOfficeResponse
 
 	row := config.DB.QueryRow("SELECT id, name, address, total_counter FROM branch_offices WHERE id = $1", id)
 	err := row.Scan(&branchOffice.ID, &branchOffice.Name, &branchOffice.Address, &branchOffice.TotalCounter)
@@ -58,11 +57,7 @@ func GetBranchOfficesById(id uint) (*models.BranchOffice, error) {
 }
 
 // CreateBranchOffices creates a new branch office
-func CreateBranchOffices(branchOffice *models.BranchOffice) error {
-
-	if err := validation.ValidateBranchOffices(branchOffice); err != nil {
-		return err
-	}
+func CreateBranchOffices(branchOffice *models.BranchOfficeCreateRequest) error {
 
 	_, err := config.DB.Exec("INSERT INTO branch_offices (name, address, total_counter) VALUES ($1, $2, $3)",
 		branchOffice.Name, branchOffice.Address, branchOffice.TotalCounter)
@@ -74,7 +69,7 @@ func CreateBranchOffices(branchOffice *models.BranchOffice) error {
 }
 
 // UpdateBranchOffices updates an existing branch office by ID
-func UpdateBranchOffices(id uint, branchOffice *models.BranchOffice) error {
+func UpdateBranchOffices(id uint, branchOffice *models.BranchOfficeCreateRequest) error {
 	_, err := config.DB.Exec("UPDATE branch_offices SET name = $1, address = $2, total_counter = $3 WHERE id = $4",
 		branchOffice.Name, branchOffice.Address, branchOffice.TotalCounter, id)
 	if err != nil {

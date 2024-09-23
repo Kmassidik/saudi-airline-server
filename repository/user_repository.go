@@ -80,11 +80,6 @@ func GetUserByID(id uint) (*models.User, error) {
 
 // CreateUser inserts a new user into the database with an optional image path
 func CreateUser(user *models.User) error {
-	// Perform validation before insertion
-	if err := validation.ValidateUser(user); err != nil {
-		return err
-	}
-
 	// Hash the user's password before saving to the database
 	hashedPassword, err := helpers.HashingPasswordFunc(user.Password)
 	if err != nil {

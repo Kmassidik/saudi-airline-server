@@ -14,16 +14,6 @@ func SetupRoutes(r *gin.Engine) {
 		})
 	})
 
-	// User routes
-	userRoutes := r.Group("/users")
-	{
-		userRoutes.GET("", controllers.GetUsersHandler)
-		userRoutes.GET("/:id", controllers.GetUserHandler)
-		userRoutes.POST("", controllers.CreateUserHandler)
-		userRoutes.PUT("/:id", controllers.UpdateUserHandler)
-		userRoutes.DELETE("/:id", controllers.DeleteUserHandler)
-	}
-
 	// BranchOffice routes
 	branchOfficeRoutes := r.Group("/branch_offices")
 	{
@@ -34,11 +24,20 @@ func SetupRoutes(r *gin.Engine) {
 		branchOfficeRoutes.DELETE("/:id", controllers.DeleteBranchOfficeHandler)
 	}
 
+	// User routes
+	userRoutes := r.Group("/users")
+	{
+		userRoutes.GET("", controllers.GetUsersHandler)
+		userRoutes.GET("/:id", controllers.GetUserHandler)
+		userRoutes.POST("", controllers.CreateUserHandler)
+		userRoutes.PUT("/:id", controllers.UpdateUserHandler)
+		userRoutes.DELETE("/:id", controllers.DeleteUserHandler)
+	}
+
 	// BranchCounter routes
 	branchCounterRoutes := r.Group("/branch_counters")
 	{
-		branchCounterRoutes.GET("", controllers.GetBranchCountersHandler)
-		branchCounterRoutes.GET("/:id", controllers.GetBranchCounterHandler)
+		branchCounterRoutes.GET("/:id", controllers.GetBranchCounterHandlerByBranchId)
 		branchCounterRoutes.POST("", controllers.CreateBranchCounterHandler)
 		branchCounterRoutes.PUT("/:id", controllers.UpdateBranchCounterHandler)
 		branchCounterRoutes.DELETE("/:id", controllers.DeleteBranchCounterHandler)

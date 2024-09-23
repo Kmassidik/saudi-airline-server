@@ -7,14 +7,6 @@ import (
 	"log"
 )
 
-// Assuming you have a DB connection setup
-var db *sql.DB
-
-// SetDB sets the database connection for use in the repository
-func SetDB(database *sql.DB) {
-	db = database
-}
-
 // GetCompanyProfile fetches the company profile from the database
 func GetCompanyProfile() (*models.CompanyProfile, error) {
 	var company models.CompanyProfile
@@ -40,10 +32,7 @@ func GetCompanyProfile() (*models.CompanyProfile, error) {
 
 // UpdateCompanyProfile updates the company profile in the database
 func UpdateCompanyProfile(id uint, name string, logo string) error {
-	var query string
-
-	query = "UPDATE company_profiles SET name = $1, logo = $2 WHERE id = $3"
-	_, err := config.DB.Exec(query, name, logo, id)
+	_, err := config.DB.Exec("UPDATE company_profiles SET name = $1, logo = $2 WHERE id = $3", name, logo, id)
 	if err != nil {
 		log.Println("Error updating user:", err)
 		return err

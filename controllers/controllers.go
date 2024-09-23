@@ -16,6 +16,155 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// BranchOffice Handlers
+
+func GetBranchOfficesHandler(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "20")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 20
+	}
+
+	offset := (page - 1) * limit
+
+	// Use the service layer to get the branch offices
+	branchOffices, err := services.GetAllBranchOffices(limit, offset)
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	// Fetch the total branch office count
+	totalCount, err := repository.GetBranchOfficesCount()
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	totalPages := (totalCount + limit - 1) / limit
+
+	c.JSON(http.StatusOK, gin.H{
+		"page":           page,
+		"limit":          limit,
+		"total_pages":    totalPages,
+		"total_count":    totalCount,
+		"branch_offices": branchOffices,
+	})
+}
+
+func GetBranchOfficeHandler(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
+		return
+	}
+
+	branchOffice, err := services.GetBranchOfficeByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Branch office not found"})
+		return
+	}
+
+	if branchOffice == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Branch office not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, branchOffice)
+}
+
+func CreateBranchOfficeHandler(c *gin.Context) {
+	var input map[string]interface{}
+
+	// Parse request body
+	if err := c.BindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate input using the validation function
+	if err := validation.ValidateBranchOffices(input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Create BranchOffice model from validated input
+	branchOffice := models.BranchOfficeCreateRequest{
+		Name:         input["name"].(string),
+		Address:      input["address"].(string),
+		TotalCounter: uint(input["total_counter"].(float64)), // Assuming total_counter comes as float64 from JSON
+	}
+
+	// Call service to create branch office
+	if err := services.CreateBranchOffice(&branchOffice); err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Branch office created successfully"})
+}
+
+func UpdateBranchOfficeHandler(c *gin.Context) {
+	var input map[string]interface{}
+
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
+		return
+	}
+
+	// Parse request body
+	if err := c.BindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate input using the validation function
+	if err := validation.ValidateBranchOffices(input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	branchOffice := models.BranchOfficeCreateRequest{
+		Name:         input["name"].(string),
+		Address:      input["address"].(string),
+		TotalCounter: uint(input["total_counter"].(float64)), // Assuming total_counter comes as float64 from JSON
+	}
+
+	if err := services.UpdateBranchOffice(uint(id), &branchOffice); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update branch office"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch office updated successfully"})
+}
+
+func DeleteBranchOfficeHandler(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
+		return
+	}
+
+	if err := services.DeleteBranchOffice(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete branch office"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch office deleted successfully"})
+}
+
 // User Handlers
 
 func GetUsersHandler(c *gin.Context) {
@@ -268,6 +417,7 @@ func DeleteUserHandler(c *gin.Context) {
 }
 
 // CompanyProfile Handlers
+
 func GetCompanyProfileHandler(c *gin.Context) {
 	// Get the company profile
 	company, err := services.GetCompanyProfile()
@@ -352,153 +502,42 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Company profile updated successfully"})
 }
 
-// BranchOffice Handlers
+// BranchCounter Handlers
 
-// GetBranchOfficesHandler retrieves all branch offices with pagination
-func GetBranchOfficesHandler(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "20")
+func GetBranchCounterHandlerByBranchId(c *gin.Context) {
 
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		page = 1
-	}
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 20
-	}
-
-	offset := (page - 1) * limit
-
-	// Use the service layer to get the branch offices
-	branchOffices, err := services.GetAllBranchOffices(limit, offset)
-	if err != nil {
-		c.Error(err) // Pass error to the middleware
-		return
-	}
-
-	// Fetch the total branch office count
-	totalCount, err := repository.GetBranchOfficesCount()
-	if err != nil {
-		c.Error(err) // Pass error to the middleware
-		return
-	}
-
-	totalPages := (totalCount + limit - 1) / limit
-
-	c.JSON(http.StatusOK, gin.H{
-		"page":           page,
-		"limit":          limit,
-		"total_pages":    totalPages,
-		"total_count":    totalCount,
-		"branch_offices": branchOffices,
-	})
+	// Implement logic to retrieve branch counters
+	c.JSON(http.StatusOK, gin.H{"message": "Get all branch counters by id Branch Office"})
 }
 
-// GetBranchOfficeHandler retrieves a single branch office by ID
-func GetBranchOfficeHandler(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
-		return
-	}
-
-	branchOffice, err := services.GetBranchOfficeByID(uint(id))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Branch office not found"})
-		return
-	}
-
-	if branchOffice == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Branch office not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, branchOffice)
-}
-
-// CreateBranchOfficeHandler creates a new branch office
-func CreateBranchOfficeHandler(c *gin.Context) {
-	var branchOffice models.BranchOffice
-
-	if err := c.BindJSON(&branchOffice); err != nil {
+func CreateBranchCounterHandler(c *gin.Context) {
+	var branchCounter models.BranchCounter
+	// Parse request body into a map for validation
+	var input map[string]interface{}
+	if err := c.BindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	// Validate branch offices
-	if err := validation.ValidateBranchOffices(&branchOffice); err != nil {
+	// Validate input using the validation function
+	if err := validation.ValidateBranchCounter(input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Call service to create user
-	if err := services.CreateBranchOffice(&branchOffice); err != nil {
-		c.Error(err) // Pass error to the middleware
+	// Manually bind validated values to branchCounter struct
+	branchCounter.CounterLocation = input["counter_location"].(string)
+	branchCounter.UserID = uint(input["user_id"].(float64))
+	branchCounter.BranchID = uint(input["branch_id"].(float64)) // branch_id is float64 from JSON
+
+	// Call service to create BranchCounter
+	if err := services.CreateBranchCounter(&branchCounter); err != nil {
+		c.Error(err) // Pass error to middleware
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Branch office created successfully"})
-}
-
-// UpdateBranchOfficeHandler updates an existing branch office by ID
-func UpdateBranchOfficeHandler(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
-		return
-	}
-
-	var branchOffice models.BranchOffice
-	if err := c.ShouldBindJSON(&branchOffice); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-		return
-	}
-
-	if err := services.UpdateBranchOffice(uint(id), &branchOffice); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update branch office"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Branch office updated successfully"})
-}
-
-// DeleteBranchOfficeHandler deletes a branch office by ID
-func DeleteBranchOfficeHandler(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
-		return
-	}
-
-	if err := services.DeleteBranchOffice(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete branch office"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Branch office deleted successfully"})
-}
-
-// BranchCounter Handlers
-
-func GetBranchCountersHandler(c *gin.Context) {
-	// Implement logic to retrieve branch counters
-	c.JSON(http.StatusOK, gin.H{"message": "Get all branch counters"})
-}
-
-func GetBranchCounterHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to retrieve a branch counter by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Get branch counter", "id": id})
-}
-
-func CreateBranchCounterHandler(c *gin.Context) {
-	// Implement logic to create a new branch counter
-	c.JSON(http.StatusOK, gin.H{"message": "Create branch counter"})
+	// Return success response
+	c.JSON(http.StatusOK, gin.H{"message": "Branch counter created successfully", "data": branchCounter})
 }
 
 func UpdateBranchCounterHandler(c *gin.Context) {

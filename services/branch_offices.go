@@ -6,19 +6,19 @@ import (
 )
 
 // GetAllBranchOffices retrieves all branch offices with pagination
-func GetAllBranchOffices(limit, offset int) ([]models.BranchOffice, error) {
+func GetAllBranchOffices(limit, offset int) ([]models.BranchOfficeResponse, error) {
 	// Fetch branch offices from the repository
 	return repository.GetAllBranchOffices(limit, offset)
 }
 
 // GetBranchOfficeByID retrieves a branch office by ID
-func GetBranchOfficeByID(id uint) (*models.BranchOffice, error) {
+func GetBranchOfficeByID(id uint) (*models.BranchOfficeResponse, error) {
 	// Fetch a single branch office by ID from the repository
 	return repository.GetBranchOfficesById(id)
 }
 
 // CreateBranchOffice creates a new branch office
-func CreateBranchOffice(branchOffice *models.BranchOffice) error {
+func CreateBranchOffice(branchOffice *models.BranchOfficeCreateRequest) error {
 	// Perform any validation before inserting into the repository if necessary
 	if err := repository.CreateBranchOffices(branchOffice); err != nil {
 		return err
@@ -28,7 +28,7 @@ func CreateBranchOffice(branchOffice *models.BranchOffice) error {
 }
 
 // UpdateBranchOffice updates an existing branch office by ID
-func UpdateBranchOffice(id uint, branchOffice *models.BranchOffice) error {
+func UpdateBranchOffice(id uint, branchOffice *models.BranchOfficeCreateRequest) error {
 	// Call the repository to update the branch office data
 	return repository.UpdateBranchOffices(id, branchOffice)
 }
