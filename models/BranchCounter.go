@@ -6,3 +6,11 @@ type BranchCounter struct {
 	UserID          uint   `json:"user_id"`
 	BranchID        uint   `json:"branch_id"`
 }
+
+// BranchCounterWithNames includes additional fields for names from related tables
+type BranchCounterWithNames struct {
+	ID              uint   `json:"id"`
+	CounterLocation string `json:"counter_location"`
+	BranchName      string `json:"branch_name"` // Name from branch_offices table
+	FullName        string `json:"full_name"`   // Name from users table
+}

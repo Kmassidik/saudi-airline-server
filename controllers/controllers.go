@@ -436,16 +436,26 @@ func DeleteUserHandler(c *gin.Context) {
 
 // BranchCounter Handlers
 
+// GetBranchCounterHandlerByBranchId retrieves all branch counters by branch ID
 func GetBranchCounterHandlerByBranchId(c *gin.Context) {
+	id := c.Param("branch_id")
 
-	// Implement logic to retrieve branch counters
-	c.JSON(http.StatusOK, gin.H{"message": "Get all branch counters by id Branch Office"})
+	// Call service to retrieve branch counters by branch ID
+	counters, err := services.GetBranchCountersByBranchID(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, counters)
 }
 
+// CreateBranchCounterHandler creates a new branch counter
 func CreateBranchCounterHandler(c *gin.Context) {
 	var branchCounter models.BranchCounter
-	// Parse request body into a map for validation
 	var input map[string]interface{}
+
+	// Parse request body into a map for validation
 	if err := c.BindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
@@ -460,7 +470,7 @@ func CreateBranchCounterHandler(c *gin.Context) {
 	// Manually bind validated values to branchCounter struct
 	branchCounter.CounterLocation = input["counter_location"].(string)
 	branchCounter.UserID = uint(input["user_id"].(float64))
-	branchCounter.BranchID = uint(input["branch_id"].(float64)) // branch_id is float64 from JSON
+	branchCounter.BranchID = uint(input["branch_id"].(float64))
 
 	// Call service to create BranchCounter
 	if err := services.CreateBranchCounter(&branchCounter); err != nil {
@@ -469,19 +479,20 @@ func CreateBranchCounterHandler(c *gin.Context) {
 	}
 
 	// Return success response
-	c.JSON(http.StatusOK, gin.H{"message": "Branch counter created successfully", "data": branchCounter})
+	c.JSON(http.StatusCreated, gin.H{"message": "Branch counter created successfully"})
 }
 
-func UpdateBranchCounterHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to update a branch counter by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Update branch counter", "id": id})
-}
-
+// DeleteBranchCounterHandler deletes a branch counter by ID
 func DeleteBranchCounterHandler(c *gin.Context) {
 	id := c.Param("id")
-	// Implement logic to delete a branch counter by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Delete branch counter", "id": id})
+
+	// Call service to delete the branch counter
+	if err := services.DeleteBranchCounter(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting branch counter"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch counter deleted successfully", "id": id})
 }
 
 // CompanyProfile Handlers

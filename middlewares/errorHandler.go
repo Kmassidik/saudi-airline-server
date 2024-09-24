@@ -91,7 +91,7 @@ func handlePostgresErrorBranchCounter(c *gin.Context, pqErr *pq.Error) {
 	case "unique_violation":
 		c.JSON(http.StatusConflict, gin.H{"error": "Duplicate key: the email already exists"})
 	case "foreign_key_violation":
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Foreign key violation"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Foreign key violation, please check user_id or branch_id "})
 	case "not_null_violation":
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required field"})
 	case "check_violation":

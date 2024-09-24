@@ -37,9 +37,8 @@ func SetupRoutes(r *gin.Engine) {
 	// BranchCounter routes
 	branchCounterRoutes := r.Group("/branch_counters")
 	{
-		branchCounterRoutes.GET("/:id", controllers.GetBranchCounterHandlerByBranchId)
+		branchCounterRoutes.GET("/:branch_id", controllers.GetBranchCounterHandlerByBranchId)
 		branchCounterRoutes.POST("", controllers.CreateBranchCounterHandler)
-		branchCounterRoutes.PUT("/:id", controllers.UpdateBranchCounterHandler)
 		branchCounterRoutes.DELETE("/:id", controllers.DeleteBranchCounterHandler)
 	}
 

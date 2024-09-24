@@ -19,10 +19,41 @@ func CreateBranchCounter(branchCounter *models.BranchCounter) error {
 	return nil
 }
 
-// UpdateBranchCounter updates an existing branch counter
-func UpdateBranchCounter(id uint, branchCounter *models.BranchCounter) error {
-	_, err := config.DB.Exec("UPDATE branch_counters SET counter_location = $1, user_id = $2, branch_id = $3 WHERE id = $4", branchCounter.CounterLocation, branchCounter.UserID, branchCounter.BranchID, id)
-	return err
+// GetBranchCountersByBranchID retrieves branch counters by branch ID, including names from related tables
+func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, error) {
+	query := `
+        SELECT 
+            bc.id, 
+            bc.counter_location, 
+            bo.name AS branch_name, 
+            u.full_name AS full_name 
+        FROM branch_counters bc
+        JOIN branch_offices bo ON bc.branch_id = bo.id
+        JOIN users u ON bc.user_id = u.id
+        WHERE bc.branch_id = $1
+    `
+
+	rows, err := config.DB.Query(query, id) // Use Query instead of Exec for SELECT statements
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var counters []models.BranchCounterWithNames
+	for rows.Next() {
+		var counter models.BranchCounterWithNames
+		if err := rows.Scan(
+			&counter.ID,
+			&counter.CounterLocation,
+			&counter.BranchName,
+			&counter.FullName,
+		); err != nil {
+			return nil, err
+		}
+		counters = append(counters, counter)
+	}
+
+	return counters, nil
 }
 
 // DeleteBranchCounter deletes a branch counter by ID
