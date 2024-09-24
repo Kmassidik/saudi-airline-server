@@ -23,7 +23,14 @@ func ErrorHandler() gin.HandlerFunc {
 
 			// Handle specific PostgreSQL errors
 			if pqErr, ok := err.(*pq.Error); ok {
-				handlePostgresError(c, pqErr)
+				switch pqErr.Table {
+				case "users":
+					handlePostgresErrorUser(c, pqErr)
+				case "branch_offices":
+					handlePostgresErrorBranchOffice(c, pqErr)
+				case "branch_counters":
+					handlePostgresErrorBranchCounter(c, pqErr)
+				}
 				return
 			}
 
@@ -37,7 +44,47 @@ func ErrorHandler() gin.HandlerFunc {
 }
 
 // handlePostgresError handles PostgreSQL specific errors and sends appropriate responses
-func handlePostgresError(c *gin.Context, pqErr *pq.Error) {
+func handlePostgresErrorUser(c *gin.Context, pqErr *pq.Error) {
+	log.Printf("PostgreSQL error: %v", pqErr)
+
+	switch pqErr.Code.Name() {
+	case "unique_violation":
+		c.JSON(http.StatusConflict, gin.H{"error": "Duplicate key: the email already exists"})
+	case "foreign_key_violation":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Foreign key violation, Branch ID not found!"})
+	case "not_null_violation":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required field"})
+	case "check_violation":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data failed validation check"})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Database error: " + pqErr.Message,
+		})
+	}
+}
+
+// handlePostgresError handles PostgreSQL specific errors and sends appropriate responses
+func handlePostgresErrorBranchOffice(c *gin.Context, pqErr *pq.Error) {
+	log.Printf("PostgreSQL error: %v", pqErr)
+
+	switch pqErr.Code.Name() {
+	case "unique_violation":
+		c.JSON(http.StatusConflict, gin.H{"error": "Duplicate key: the email already exists"})
+	case "foreign_key_violation":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Foreign key violation"})
+	case "not_null_violation":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required field"})
+	case "check_violation":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data failed validation check"})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Database error: " + pqErr.Message,
+		})
+	}
+}
+
+// handlePostgresError handles PostgreSQL specific errors and sends appropriate responses
+func handlePostgresErrorBranchCounter(c *gin.Context, pqErr *pq.Error) {
 	log.Printf("PostgreSQL error: %v", pqErr)
 
 	switch pqErr.Code.Name() {

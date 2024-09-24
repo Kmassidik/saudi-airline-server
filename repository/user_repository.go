@@ -11,8 +11,8 @@ import (
 )
 
 // GetAllUsers retrieves all users from the database with pagination
-func GetAllUsers(limit, offset int) ([]models.AllUserResponse, error) {
-	var users []models.AllUserResponse
+func GetAllUsers(limit, offset int) ([]models.UserResponse, error) {
+	var users []models.UserResponse
 
 	rows, err := config.DB.Query(
 		"SELECT id, full_name, email, role, likes, dislikes, image FROM users LIMIT $1 OFFSET $2",
@@ -25,7 +25,7 @@ func GetAllUsers(limit, offset int) ([]models.AllUserResponse, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var user models.AllUserResponse
+		var user models.UserResponse
 
 		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image); err != nil {
 			log.Println("Error scanning user:", err)
@@ -89,8 +89,8 @@ func CreateUser(user *models.User) error {
 	log.Println("Inserting user:", user)
 	// Insert the user into the database, including the image path
 	_, err = config.DB.Exec(
-		"INSERT INTO users (full_name, email, password, role, likes, dislikes, image) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, user.Image,
+		"INSERT INTO users (full_name, email, password, role, likes, dislikes, image, branch_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, user.Image, user.BranchId,
 	)
 	if err != nil {
 		log.Println("Error inserting user:", err)
@@ -120,15 +120,15 @@ func UpdateUser(id uint, user *models.User) error {
 	// Prepare the SQL query
 	var query string
 	if user.Image != "" {
-		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, likes = $5, dislikes = $6, image = $7 WHERE id = $8"
-		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, user.Image, id)
+		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, image = $5, branch_id = $6 WHERE id = $7"
+		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Image, user.BranchId, id)
 		if err != nil {
 			log.Println("Error updating user:", err)
 			return err
 		}
 	} else {
-		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, likes = $5, dislikes = $6 WHERE id = $7"
-		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, id)
+		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, branch_id = $5 WHERE id = $6"
+		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.BranchId, id)
 		if err != nil {
 			log.Println("Error updating user:", err)
 			return err

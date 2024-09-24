@@ -240,12 +240,21 @@ func CreateUserHandler(c *gin.Context) {
 	email := c.Request.FormValue("email")
 	password := c.Request.FormValue("password")
 	role := c.Request.FormValue("role")
+	branchIdStr := c.Request.FormValue("branch_id")
+
+	branchId, err := strconv.ParseUint(branchIdStr, 10, 32)
+	if err != nil {
+		log.Println("Error converting branch_id to uint:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch_id"})
+		return
+	}
 
 	user := models.User{
 		FullName: fullName,
 		Email:    email,
 		Password: password,
 		Role:     role,
+		BranchId: uint(branchId),
 	}
 
 	// Handle file upload
@@ -310,6 +319,14 @@ func UpdateUserHandler(c *gin.Context) {
 	email := c.Request.FormValue("email")
 	password := c.Request.FormValue("password")
 	role := c.Request.FormValue("role")
+	branchIdStr := c.Request.FormValue("branch_id")
+
+	branchId, err := strconv.ParseUint(branchIdStr, 10, 32)
+	if err != nil {
+		log.Println("Error converting branch_id to uint:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch_id"})
+		return
+	}
 
 	// Find existing user
 	user, err := services.GetUserByID(uint(userID))
@@ -328,6 +345,7 @@ func UpdateUserHandler(c *gin.Context) {
 		user.Password = password // Only update if password is provided
 	}
 	user.Role = role
+	user.BranchId = uint(branchId)
 
 	// Handle file upload
 	fileHeader, err := c.FormFile("image")
@@ -416,6 +434,56 @@ func DeleteUserHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
+// BranchCounter Handlers
+
+func GetBranchCounterHandlerByBranchId(c *gin.Context) {
+
+	// Implement logic to retrieve branch counters
+	c.JSON(http.StatusOK, gin.H{"message": "Get all branch counters by id Branch Office"})
+}
+
+func CreateBranchCounterHandler(c *gin.Context) {
+	var branchCounter models.BranchCounter
+	// Parse request body into a map for validation
+	var input map[string]interface{}
+	if err := c.BindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate input using the validation function
+	if err := validation.ValidateBranchCounter(input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Manually bind validated values to branchCounter struct
+	branchCounter.CounterLocation = input["counter_location"].(string)
+	branchCounter.UserID = uint(input["user_id"].(float64))
+	branchCounter.BranchID = uint(input["branch_id"].(float64)) // branch_id is float64 from JSON
+
+	// Call service to create BranchCounter
+	if err := services.CreateBranchCounter(&branchCounter); err != nil {
+		c.Error(err) // Pass error to middleware
+		return
+	}
+
+	// Return success response
+	c.JSON(http.StatusOK, gin.H{"message": "Branch counter created successfully", "data": branchCounter})
+}
+
+func UpdateBranchCounterHandler(c *gin.Context) {
+	id := c.Param("id")
+	// Implement logic to update a branch counter by ID
+	c.JSON(http.StatusOK, gin.H{"message": "Update branch counter", "id": id})
+}
+
+func DeleteBranchCounterHandler(c *gin.Context) {
+	id := c.Param("id")
+	// Implement logic to delete a branch counter by ID
+	c.JSON(http.StatusOK, gin.H{"message": "Delete branch counter", "id": id})
+}
+
 // CompanyProfile Handlers
 
 func GetCompanyProfileHandler(c *gin.Context) {
@@ -500,54 +568,4 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Company profile updated successfully"})
-}
-
-// BranchCounter Handlers
-
-func GetBranchCounterHandlerByBranchId(c *gin.Context) {
-
-	// Implement logic to retrieve branch counters
-	c.JSON(http.StatusOK, gin.H{"message": "Get all branch counters by id Branch Office"})
-}
-
-func CreateBranchCounterHandler(c *gin.Context) {
-	var branchCounter models.BranchCounter
-	// Parse request body into a map for validation
-	var input map[string]interface{}
-	if err := c.BindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-		return
-	}
-
-	// Validate input using the validation function
-	if err := validation.ValidateBranchCounter(input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Manually bind validated values to branchCounter struct
-	branchCounter.CounterLocation = input["counter_location"].(string)
-	branchCounter.UserID = uint(input["user_id"].(float64))
-	branchCounter.BranchID = uint(input["branch_id"].(float64)) // branch_id is float64 from JSON
-
-	// Call service to create BranchCounter
-	if err := services.CreateBranchCounter(&branchCounter); err != nil {
-		c.Error(err) // Pass error to middleware
-		return
-	}
-
-	// Return success response
-	c.JSON(http.StatusOK, gin.H{"message": "Branch counter created successfully", "data": branchCounter})
-}
-
-func UpdateBranchCounterHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to update a branch counter by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Update branch counter", "id": id})
-}
-
-func DeleteBranchCounterHandler(c *gin.Context) {
-	id := c.Param("id")
-	// Implement logic to delete a branch counter by ID
-	c.JSON(http.StatusOK, gin.H{"message": "Delete branch counter", "id": id})
 }
