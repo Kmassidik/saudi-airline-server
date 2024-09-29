@@ -59,6 +59,7 @@ func GetBranchOfficesHandler(c *gin.Context) {
 		"branch_offices": branchOffices,
 	})
 }
+
 func GetBranchOfficesOptionHandler(c *gin.Context) {
 
 	// Use the service layer to get the branch offices
@@ -459,16 +460,35 @@ func DeleteUserHandler(c *gin.Context) {
 // BranchCounter Handlers
 
 func GetBranchCounterHandlerByBranchId(c *gin.Context) {
-	id := c.Param("branch_id")
+	idParam := c.Param("branch_id")
 
-	// Call service to retrieve branch counters by branch ID
-	counters, err := services.GetBranchCountersByBranchID(id)
+	// Convert the string idParam to an integer
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch office ID"})
 		return
 	}
 
-	c.JSON(http.StatusOK, counters)
+	// Check the branch office by ID
+	branchOffice, err := services.GetBranchOfficeByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Branch office not found"})
+		return
+	}
+
+	// Call service to retrieve branch counters by branch ID
+	counters, err := services.GetBranchCountersByBranchID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return JSON response with counters and total counter
+	c.JSON(http.StatusOK, gin.H{
+		"list_counter":  counters,
+		"name_branch":   branchOffice.Name,
+		"total_counter": branchOffice.TotalCounter,
+	})
 }
 
 func CreateBranchCounterHandler(c *gin.Context) {

@@ -7,11 +7,7 @@ import (
 )
 
 // GetBranchCountersByBranchID retrieves branch counters for a specific branch ID
-func GetBranchCountersByBranchID(branchID string) ([]models.BranchCounterWithNames, error) {
-	id, err := strconv.Atoi(branchID)
-	if err != nil {
-		return nil, err
-	}
+func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, error) {
 	// Convert id from int to uint
 	uintID := uint(id)
 	return repository.GetBranchCountersByBranchID(uintID)
