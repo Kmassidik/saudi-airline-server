@@ -12,6 +12,10 @@ type BranchOfficeResponse struct {
 	Address      string `json:"address"`
 	TotalCounter uint   `json:"total_counter"`
 }
+type BranchOfficeOptionResponse struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+}
 
 type BranchOfficeListResponse struct {
 	Offices []BranchOfficeResponse `json:"offices"`

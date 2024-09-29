@@ -21,6 +21,8 @@ type UserResponse struct {
 	Likes    uint   `json:"likes"`
 	Dislikes uint   `json:"dislikes"`
 	Image    string `json:"image"`
+	BranchId uint   `json:"branch_id"`
+	Password string `json:"password"`
 }
 
 // UserDetailResponse for more detailed responses, again without exposing the password

@@ -56,4 +56,5 @@ coverage.out
 # VSCode settings
 .vscode/settings.json
 
-images
+public/images/*.png
+public/assets/*.png

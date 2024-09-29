@@ -30,6 +30,28 @@ func GetAllBranchOffices(limit, offset int) ([]models.BranchOfficeResponse, erro
 	return branchOffices, nil
 }
 
+func GetAllBranchOfficesOption() ([]models.BranchOfficeOptionResponse, error) {
+	var branchOffices []models.BranchOfficeOptionResponse
+
+	rows, err := config.DB.Query("SELECT id, name FROM branch_offices")
+	if err != nil {
+		log.Println("Error querying branch offices:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var branchOffice models.BranchOfficeOptionResponse
+		if err := rows.Scan(&branchOffice.ID, &branchOffice.Name); err != nil {
+			log.Println("Error scanning branch office:", err)
+			return nil, err
+		}
+		branchOffices = append(branchOffices, branchOffice)
+	}
+
+	return branchOffices, nil
+}
+
 // GetBranchOfficesCount retrieves the total number of branch offices
 func GetBranchOfficesCount() (int, error) {
 	var count int

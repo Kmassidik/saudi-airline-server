@@ -6,8 +6,8 @@ import (
 )
 
 // GetAllUsers retrieves all users with pagination
-func GetAllUsers(limit, offset int) ([]models.UserResponse, error) {
-	return repository.GetAllUsers(limit, offset)
+func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) {
+	return repository.GetAllUsers(limit, offset, role)
 }
 
 // GetUserByID retrieves a user by ID
@@ -33,4 +33,17 @@ func UpdateUser(id uint, user *models.User) error {
 // DeleteUser deletes a user by ID
 func DeleteUser(id uint) error {
 	return repository.DeleteUser(id)
+}
+
+// GetUsersCount fetches the count of users based on the role from the repository.
+func GetUsersCount(role string) (int, error) {
+	// Call the repository function and get the count and error
+	count, err := repository.GetUsersCount(role)
+	if err != nil {
+		// If there is an error, return 0 and the error
+		return 0, err
+	}
+
+	// Return the user count and nil for error if successful
+	return count, nil
 }

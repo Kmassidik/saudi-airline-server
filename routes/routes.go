@@ -18,6 +18,7 @@ func SetupRoutes(r *gin.Engine) {
 	branchOfficeRoutes := r.Group("/branch_offices")
 	{
 		branchOfficeRoutes.GET("", controllers.GetBranchOfficesHandler)
+		branchOfficeRoutes.GET("/option-list", controllers.GetBranchOfficesOptionHandler)
 		branchOfficeRoutes.GET("/:id", controllers.GetBranchOfficeHandler)
 		branchOfficeRoutes.POST("", controllers.CreateBranchOfficeHandler)
 		branchOfficeRoutes.PUT("/:id", controllers.UpdateBranchOfficeHandler)

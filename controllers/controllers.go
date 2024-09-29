@@ -8,6 +8,7 @@ import (
 	"api-server/services"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ import (
 
 func GetBranchOfficesHandler(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "20")
+	limitStr := c.DefaultQuery("limit", "5")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
@@ -29,7 +30,7 @@ func GetBranchOfficesHandler(c *gin.Context) {
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
-		limit = 20
+		limit = 5
 	}
 
 	offset := (page - 1) * limit
@@ -57,6 +58,17 @@ func GetBranchOfficesHandler(c *gin.Context) {
 		"total_count":    totalCount,
 		"branch_offices": branchOffices,
 	})
+}
+func GetBranchOfficesOptionHandler(c *gin.Context) {
+
+	// Use the service layer to get the branch offices
+	branchOffices, err := services.GetAllBranchOfficesOptionList()
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	c.JSON(http.StatusOK, branchOffices)
 }
 
 func GetBranchOfficeHandler(c *gin.Context) {
@@ -169,7 +181,8 @@ func DeleteBranchOfficeHandler(c *gin.Context) {
 
 func GetUsersHandler(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "20")
+	role := c.DefaultQuery("role", "officier")
+	limitStr := c.DefaultQuery("limit", "5")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
@@ -178,20 +191,20 @@ func GetUsersHandler(c *gin.Context) {
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
-		limit = 20
+		limit = 5
 	}
 
 	offset := (page - 1) * limit
 
 	// Use the service layer to get the users
-	users, err := services.GetAllUsers(limit, offset)
+	users, err := services.GetAllUsers(limit, offset, role)
 	if err != nil {
 		c.Error(err) // Pass error to the middleware
 		return
 	}
 
 	// Fetch the total user count
-	totalCount, err := repository.GetUsersCount()
+	totalCount, err := services.GetUsersCount(role)
 	if err != nil {
 		c.Error(err) // Pass error to the middleware
 		return
@@ -205,6 +218,7 @@ func GetUsersHandler(c *gin.Context) {
 		"total_pages": totalPages,
 		"total_count": totalCount,
 		"users":       users,
+		"role":        role,
 	})
 }
 
@@ -242,7 +256,7 @@ func CreateUserHandler(c *gin.Context) {
 	role := c.Request.FormValue("role")
 	branchIdStr := c.Request.FormValue("branch_id")
 
-	branchId, err := strconv.ParseUint(branchIdStr, 10, 32)
+	branchId, err := strconv.Atoi(branchIdStr)
 	if err != nil {
 		log.Println("Error converting branch_id to uint:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch_id"})
@@ -257,36 +271,18 @@ func CreateUserHandler(c *gin.Context) {
 		BranchId: uint(branchId),
 	}
 
-	// Handle file upload
-	fileHeader, err := c.FormFile("image")
+	// Handle file upload but don't save it yet
+	var fileHeader *multipart.FileHeader
+	fileHeader, err = c.FormFile("image")
 	if err == nil {
-		// If there's a file, handle the file upload
+		// If there's a file, set the filename but don't save yet
 		fileName := helpers.GenerateFileName()
-		filePath := filepath.Join("public/images", fileName)
-		file, err := fileHeader.Open()
-		if err != nil {
-			c.Error(err) // Pass error to the middleware
-			return
-		}
-		defer file.Close()
-
-		dst, err := os.Create(filePath)
-		if err != nil {
-			c.Error(err) // Pass error to the middleware
-			return
-		}
-		defer dst.Close()
-
-		if _, err := io.Copy(dst, file); err != nil {
-			c.Error(err) // Pass error to the middleware
-			return
-		}
-
 		user.Image = fileName
 	}
 
 	// Validate user
 	if err := validation.ValidateUser(&user); err != nil {
+		log.Println("Error Validation:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -295,6 +291,32 @@ func CreateUserHandler(c *gin.Context) {
 	if err := services.CreateUser(&user); err != nil {
 		c.Error(err) // Pass error to the middleware
 		return
+	}
+
+	// Only save the image after the user is successfully created
+	if fileHeader != nil {
+		filePath := filepath.Join("public/images", user.Image)
+		file, err := fileHeader.Open()
+		if err != nil {
+			c.Error(err) // Pass error to the middleware
+			log.Println("Error Image:", err)
+			return
+		}
+		defer file.Close()
+
+		dst, err := os.Create(filePath)
+		if err != nil {
+			log.Println("Error Image:", err)
+			c.Error(err) // Pass error to the middleware
+			return
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, file); err != nil {
+			log.Println("Error Image:", err)
+			c.Error(err) // Pass error to the middleware
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
@@ -436,7 +458,6 @@ func DeleteUserHandler(c *gin.Context) {
 
 // BranchCounter Handlers
 
-// GetBranchCounterHandlerByBranchId retrieves all branch counters by branch ID
 func GetBranchCounterHandlerByBranchId(c *gin.Context) {
 	id := c.Param("branch_id")
 
@@ -450,7 +471,6 @@ func GetBranchCounterHandlerByBranchId(c *gin.Context) {
 	c.JSON(http.StatusOK, counters)
 }
 
-// CreateBranchCounterHandler creates a new branch counter
 func CreateBranchCounterHandler(c *gin.Context) {
 	var branchCounter models.BranchCounter
 	var input map[string]interface{}
@@ -482,7 +502,6 @@ func CreateBranchCounterHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Branch counter created successfully"})
 }
 
-// DeleteBranchCounterHandler deletes a branch counter by ID
 func DeleteBranchCounterHandler(c *gin.Context) {
 	id := c.Param("id")
 
@@ -510,6 +529,9 @@ func GetCompanyProfileHandler(c *gin.Context) {
 		return
 	}
 
+	// Prepend the URL to the image field
+	company.Logo = "http://localhost:3000/assets/" + company.Logo
+
 	c.JSON(http.StatusOK, company)
 }
 
@@ -521,7 +543,7 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 		return
 	}
 
-	// Store the current image path
+	// Store the current image path (e.g., "application_logo.jpg")
 	oldImagePath := company.Logo
 
 	// Parse the form for multipart data
@@ -535,41 +557,46 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 	fileHeader, err := c.FormFile("logo")
 	var logo string
 
+	// Handle the file if provided
 	if err == nil {
-		// Handle the file upload if a new file is provided
-		fileName := filepath.Base(fileHeader.Filename)
-		filePath := filepath.Join("public/assets", fileName)
-		file, err := fileHeader.Open()
+		fileName := "application_logo.png"
+		logo = fileName // Store the filename for the logo
+
+		// Open the file
+		fileData, err := fileHeader.Open()
 		if err != nil {
 			c.Error(err)
 			return
 		}
-		defer file.Close()
+		defer fileData.Close()
 
-		dst, err := os.Create(filePath)
+		// Save the new file
+		newFilePath := filepath.Join("public/assets", logo)
+		dst, err := os.Create(newFilePath)
 		if err != nil {
 			c.Error(err)
 			return
 		}
 		defer dst.Close()
 
-		if _, err := io.Copy(dst, file); err != nil {
+		// Copy the contents to the new file
+		if _, err := io.Copy(dst, fileData); err != nil {
 			c.Error(err)
 			return
 		}
 
-		logo = fileName // Store the filename for the logo
+		// Delete the old image if it exists
+		if oldImagePath != "" {
+			oldImageFullPath := filepath.Join("public/assets", oldImagePath)
+			if err := os.Remove(oldImageFullPath); err != nil {
+				log.Println("Error deleting old image:", err)
+			} else {
+				log.Println("Old image deleted:", oldImageFullPath)
+			}
+		}
 	} else {
 		// No new image uploaded, use the old image path
 		logo = oldImagePath
-	}
-
-	// Delete the old image if a new one is uploaded and it's different
-	if oldImagePath != "" && logo != "" && oldImagePath != logo {
-		oldImageFullPath := filepath.Join("public/assets", oldImagePath) // Use the correct path
-		if err := os.Remove(oldImageFullPath); err != nil {
-			log.Println("Error deleting old image:", err)
-		}
 	}
 
 	// Call service to update company profile with ID 1

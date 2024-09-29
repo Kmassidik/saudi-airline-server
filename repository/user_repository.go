@@ -11,13 +11,24 @@ import (
 )
 
 // GetAllUsers retrieves all users from the database with pagination
-func GetAllUsers(limit, offset int) ([]models.UserResponse, error) {
+func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) {
 	var users []models.UserResponse
+	var rows *sql.Rows
+	var err error
 
-	rows, err := config.DB.Query(
-		"SELECT id, full_name, email, role, likes, dislikes, image FROM users LIMIT $1 OFFSET $2",
-		limit, offset,
-	)
+	// Handle role-based query: "officier" or not "officier"
+	if role == "officier" {
+		rows, err = config.DB.Query(
+			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role = $3 LIMIT $1 OFFSET $2",
+			limit, offset, role,
+		)
+	} else {
+		rows, err = config.DB.Query(
+			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role != $3 LIMIT $1 OFFSET $2",
+			limit, offset, "officier",
+		)
+	}
+
 	if err != nil {
 		log.Println("Error querying users:", err)
 		return nil, err
@@ -27,10 +38,13 @@ func GetAllUsers(limit, offset int) ([]models.UserResponse, error) {
 	for rows.Next() {
 		var user models.UserResponse
 
-		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image); err != nil {
+		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image, &user.BranchId); err != nil {
 			log.Println("Error scanning user:", err)
 			return nil, err
 		}
+
+		// Prepend the URL to the image field
+		user.Image = "http://localhost:3000/images/" + user.Image
 
 		users = append(users, user)
 	}
@@ -44,10 +58,19 @@ func GetAllUsers(limit, offset int) ([]models.UserResponse, error) {
 }
 
 // GetUsersCount retrieves the total number of users
-func GetUsersCount() (int, error) {
+func GetUsersCount(role string) (int, error) {
 	var count int
+	var row *sql.Row
 
-	row := config.DB.QueryRow("SELECT COUNT(*) FROM users")
+	if role == "officier" {
+		// Use a parameterized query to safely query based on role
+		row = config.DB.QueryRow("SELECT COUNT(*) FROM users WHERE role = 'officier'")
+	} else {
+		// When role is not provided, count all users
+		row = config.DB.QueryRow("SELECT COUNT(*) FROM users WHERE role != 'officier'")
+	}
+
+	// Scan the result into the count variable
 	err := row.Scan(&count)
 	if err != nil {
 		log.Println("Error querying users count:", err)
@@ -62,8 +85,8 @@ func GetUserByID(id uint) (*models.User, error) {
 	var user models.User
 
 	// Query to retrieve the user by ID
-	row := config.DB.QueryRow("SELECT id, full_name, email, role, likes, dislikes, image FROM users WHERE id = $1", id)
-	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image) // Scan the image name into imageName
+	row := config.DB.QueryRow("SELECT id, full_name, email, role, likes, dislikes, image, password FROM users WHERE id = $1", id)
+	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image, &user.Password) // Scan the image name into imageName
 
 	// If no rows are found
 	if err != nil {
