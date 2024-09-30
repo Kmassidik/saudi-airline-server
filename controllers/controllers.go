@@ -457,6 +457,24 @@ func DeleteUserHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
+func GetUsersByBranchOffice(c *gin.Context) {
+	id := c.Param("id")
+	branchId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Use the service layer to get the users
+	users, err := services.GetUsersByBranchID(uint(branchId))
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
 // BranchCounter Handlers
 
 func GetBranchCounterHandlerByBranchId(c *gin.Context) {
@@ -472,7 +490,7 @@ func GetBranchCounterHandlerByBranchId(c *gin.Context) {
 	// Check the branch office by ID
 	branchOffice, err := services.GetBranchOfficeByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Branch office not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Branch office not found"})
 		return
 	}
 

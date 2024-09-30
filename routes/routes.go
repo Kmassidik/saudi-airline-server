@@ -33,6 +33,7 @@ func SetupRoutes(r *gin.Engine) {
 		userRoutes.POST("", controllers.CreateUserHandler)
 		userRoutes.PUT("/:id", controllers.UpdateUserHandler)
 		userRoutes.DELETE("/:id", controllers.DeleteUserHandler)
+		userRoutes.GET("/branch-office/:id", controllers.GetUsersByBranchOffice)
 	}
 
 	// BranchCounter routes

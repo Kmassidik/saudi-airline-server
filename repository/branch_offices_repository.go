@@ -33,7 +33,7 @@ func GetAllBranchOffices(limit, offset int) ([]models.BranchOfficeResponse, erro
 func GetAllBranchOfficesOption() ([]models.BranchOfficeOptionResponse, error) {
 	var branchOffices []models.BranchOfficeOptionResponse
 
-	rows, err := config.DB.Query("SELECT id, name FROM branch_offices")
+	rows, err := config.DB.Query("SELECT id, name FROM branch_offices ORDER BY id ASC")
 	if err != nil {
 		log.Println("Error querying branch offices:", err)
 		return nil, err

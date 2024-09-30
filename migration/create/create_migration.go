@@ -69,7 +69,7 @@ func main() {
 		likes INT DEFAULT 0,
 		dislikes INT DEFAULT 0,
 		branch_id INT NOT NULL,
-		FOREIGN KEY (branch_id) REFERENCES branch_offices(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		FOREIGN KEY (branch_id) REFERENCES branch_offices(id) ON DELETE NULL ON UPDATE CASCADE,
 		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
@@ -92,6 +92,16 @@ func main() {
 		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
+
+	CREATE TABLE IF NOT EXISTS user_feedback_history(
+		id SERIAL PRIMARY KEY,
+		likes INT DEFAULT 1
+		dislikes INT DEFAULT 1,
+		user_id INT NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)
 
 	-- Create function to automatically update 'updatedAt' timestamp
 	CREATE OR REPLACE FUNCTION update_timestamp_column()
@@ -120,6 +130,11 @@ func main() {
 
 	CREATE TRIGGER update_company_profiles_updatedAt
 	BEFORE UPDATE ON company_profiles
+	FOR EACH ROW
+	EXECUTE FUNCTION update_timestamp_column();
+
+	CREATE TRIGGER update_user_feedback_history_updatedAt
+	BEFORE UPDATE ON user_feedback_history
 	FOR EACH ROW
 	EXECUTE FUNCTION update_timestamp_column();
 	`

@@ -25,8 +25,8 @@ func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, erro
         SELECT 
             bc.id, 
             bc.counter_location, 
-            bo.name AS branch_name, 
-            u.full_name AS full_name 
+            u.full_name AS full_name, 
+            u.image AS image 
         FROM branch_counters bc
         JOIN branch_offices bo ON bc.branch_id = bo.id
         JOIN users u ON bc.user_id = u.id
@@ -45,11 +45,15 @@ func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, erro
 		if err := rows.Scan(
 			&counter.ID,
 			&counter.CounterLocation,
-			&counter.BranchName,
 			&counter.FullName,
+			&counter.Image,
 		); err != nil {
 			return nil, err
 		}
+
+		// Prepend the URL to the image field
+		counter.Image = "http://localhost:3000/images/" + counter.Image
+
 		counters = append(counters, counter)
 	}
 

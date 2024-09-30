@@ -36,3 +36,9 @@ type UserDetailResponse struct {
 	Image    string `json:"image"`
 	// Add other fields as needed (but no password)
 }
+
+// UserResponse omits the password when retrieving user data (e.g., all users or by ID)
+type UserByBranchOfiiceResponse struct {
+	ID       uint   `json:"id"`
+	FullName string `json:"full_name"`
+}

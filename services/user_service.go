@@ -47,3 +47,7 @@ func GetUsersCount(role string) (int, error) {
 	// Return the user count and nil for error if successful
 	return count, nil
 }
+
+func GetUsersByBranchID(brancdId uint) ([]models.UserByBranchOfiiceResponse, error) {
+	return repository.GetAllUsersByBranchOfiice(brancdId)
+}

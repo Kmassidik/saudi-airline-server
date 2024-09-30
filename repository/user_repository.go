@@ -43,9 +43,6 @@ func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) 
 			return nil, err
 		}
 
-		// Prepend the URL to the image field
-		user.Image = "http://localhost:3000/images/" + user.Image
-
 		users = append(users, user)
 	}
 
@@ -171,4 +168,34 @@ func DeleteUser(id uint) error {
 	}
 
 	return nil
+}
+
+func GetAllUsersByBranchOfiice(branchId uint) ([]models.UserByBranchOfiiceResponse, error) {
+	var users []models.UserByBranchOfiiceResponse
+
+	// Execute a SELECT query to fetch users by branch_id
+	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1", branchId)
+	if err != nil {
+		log.Println("Error fetching users by branch:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Loop through the rows and scan each user
+	for rows.Next() {
+		var user models.UserByBranchOfiiceResponse
+		if err := rows.Scan(&user.ID, &user.FullName); err != nil {
+			log.Println("Error scanning user:", err)
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	// Check for any errors during row iteration
+	if err := rows.Err(); err != nil {
+		log.Println("Error during row iteration:", err)
+		return nil, err
+	}
+
+	return users, nil
 }
