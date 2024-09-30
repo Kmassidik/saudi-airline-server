@@ -42,8 +42,8 @@ func ValidateBranchOffices(input map[string]interface{}) error {
 	}
 
 	// 4. Ensure total_counter is not excessively large
-	if totalCounter > 50 { // Adjust the limit as necessary
-		return errors.New("total counter cannot exceed 10,000")
+	if totalCounter > 100 { // Adjust the limit as necessary
+		return errors.New("total counter cannot exceed 100")
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"api-server/config"
 	"api-server/models"
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -103,10 +104,15 @@ func UpdateBranchOffices(id uint, branchOffice *models.BranchOfficeCreateRequest
 
 // DeleteBranchOffices deletes a branch office by ID
 func DeleteBranchOffices(id uint) error {
-	_, err := config.DB.Exec("DELETE FROM branch_offices WHERE id = $1", id)
+	result, err := config.DB.Exec("DELETE FROM branch_offices WHERE id = $1", id)
 	if err != nil {
 		log.Println("Error deleting branch office:", err)
 		return err
 	}
+
+	if rowsAffected, _ := result.RowsAffected(); rowsAffected == 0 {
+		return fmt.Errorf("No branch office found with the given ID: %d", id)
+	}
+
 	return nil
 }

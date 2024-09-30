@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -170,8 +171,13 @@ func DeleteBranchOfficeHandler(c *gin.Context) {
 		return
 	}
 
-	if err := services.DeleteBranchOffice(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete branch office"})
+	err = services.DeleteBranchOffice(uint(id))
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "No branch office found with the given ID") {
+			statusCode = http.StatusNotFound
+		}
+		c.JSON(statusCode, gin.H{"error": err.Error()})
 		return
 	}
 
