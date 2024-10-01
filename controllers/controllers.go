@@ -578,7 +578,7 @@ func GetCompanyProfileHandler(c *gin.Context) {
 	}
 
 	// Prepend the URL to the image field
-	company.Logo = "http://localhost:3000/assets/" + company.Logo
+	company.Logo = os.Getenv("URL_IMAGE") + company.Logo
 
 	c.JSON(http.StatusOK, company)
 }

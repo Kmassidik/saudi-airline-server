@@ -174,7 +174,7 @@ func GetAllUsersByBranchOfiice(branchId uint) ([]models.UserByBranchOfiiceRespon
 	var users []models.UserByBranchOfiiceResponse
 
 	// Execute a SELECT query to fetch users by branch_id
-	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1 AND role = 'officier';", branchId)
+	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1 AND role = 'officier' AND NOT EXISTS ( SELECT 1 FROM	branch_counters WHERE branch_counters.user_id = users.id);", branchId)
 	if err != nil {
 		log.Println("Error fetching users by branch:", err)
 		return nil, err
