@@ -219,6 +219,10 @@ func GetUsersHandler(c *gin.Context) {
 
 	totalPages := (totalCount + limit - 1) / limit
 
+	for i := range users {
+		users[i].Image = "http://localhost:3000/images/" + users[i].Image
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"page":        page,
 		"limit":       limit,
@@ -603,7 +607,7 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 
 	// Handle the file if provided
 	if err == nil {
-		fileName := "application_logo.png"
+		fileName := helpers.GenerateFileName()
 		logo = fileName // Store the filename for the logo
 
 		// Open the file

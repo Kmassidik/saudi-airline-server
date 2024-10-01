@@ -19,12 +19,12 @@ func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) 
 	// Handle role-based query: "officier" or not "officier"
 	if role == "officier" {
 		rows, err = config.DB.Query(
-			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role = $3 LIMIT $1 OFFSET $2",
+			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role = $3 ORDER BY id ASC LIMIT $1 OFFSET $2",
 			limit, offset, role,
 		)
 	} else {
 		rows, err = config.DB.Query(
-			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role != $3 LIMIT $1 OFFSET $2",
+			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role != $3 ORDER BY id ASC LIMIT $1 OFFSET $2",
 			limit, offset, "officier",
 		)
 	}
@@ -174,7 +174,7 @@ func GetAllUsersByBranchOfiice(branchId uint) ([]models.UserByBranchOfiiceRespon
 	var users []models.UserByBranchOfiiceResponse
 
 	// Execute a SELECT query to fetch users by branch_id
-	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1", branchId)
+	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1 AND role = 'officier';", branchId)
 	if err != nil {
 		log.Println("Error fetching users by branch:", err)
 		return nil, err

@@ -111,7 +111,7 @@ func DeleteBranchOffices(id uint) error {
 	}
 
 	if rowsAffected, _ := result.RowsAffected(); rowsAffected == 0 {
-		return fmt.Errorf("No branch office found with the given ID: %d", id)
+		return fmt.Errorf("no branch office found with the given ID: %d", id)
 	}
 
 	return nil
