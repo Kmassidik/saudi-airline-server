@@ -34,8 +34,8 @@ func ValidateUser(user *models.User) error {
 		return errors.New("invalid email format")
 	}
 
-	if user.Role != "admin" && user.Role != "supervisor" && user.Role != "officier" {
-		return errors.New("role must be either 'admin', 'supervisor', or 'officier'")
+	if user.Role != "admin" && user.Role != "supervisor" && user.Role != "officer" {
+		return errors.New("role must be either 'admin', 'supervisor', or 'officer'")
 	}
 
 	return nil

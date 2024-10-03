@@ -50,4 +50,18 @@ func SetupRoutes(r *gin.Engine) {
 		companyProfileRoutes.GET("", controllers.GetCompanyProfileHandler)
 		companyProfileRoutes.PUT("", controllers.UpdateCompanyProfileHandler)
 	}
+
+	// Vote User routes
+	votedUserRoutes := r.Group("/voted-user")
+	{
+		votedUserRoutes.POST("/:userId", controllers.VotedUserHandler)
+	}
+
+	// Dashboard
+	dashboardRoutes := r.Group("/dashboard")
+	{
+		dashboardRoutes.GET("/total-data", controllers.TotalDataDashboard)
+		dashboardRoutes.GET("/graph-data")
+		dashboardRoutes.GET("/diagram-data")
+	}
 }

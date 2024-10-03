@@ -188,7 +188,7 @@ func DeleteBranchOfficeHandler(c *gin.Context) {
 
 func GetUsersHandler(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
-	role := c.DefaultQuery("role", "officier")
+	role := c.DefaultQuery("role", "officer")
 	limitStr := c.DefaultQuery("limit", "5")
 
 	page, err := strconv.Atoi(pageStr)
@@ -220,7 +220,7 @@ func GetUsersHandler(c *gin.Context) {
 	totalPages := (totalCount + limit - 1) / limit
 
 	for i := range users {
-		users[i].Image = "http://localhost:3000/images/" + users[i].Image
+		users[i].Image = "http://192.168.1.23:3000/images/" + users[i].Image
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -511,6 +511,10 @@ func GetBranchCounterHandlerByBranchId(c *gin.Context) {
 		return
 	}
 
+	for i := range counters {
+		counters[i].Image = "http://192.168.1.23:3000/images/" + counters[i].Image
+	}
+
 	// Return JSON response with counters and total counter
 	c.JSON(http.StatusOK, gin.H{
 		"list_counter":  counters,
@@ -654,4 +658,55 @@ func UpdateCompanyProfileHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Company profile updated successfully"})
+}
+
+// Voted Users Handlers
+func VotedUserHandler(c *gin.Context) {
+	userId := c.Param("userId")
+	voteType := c.Query("vote") // Assume "like" or "dislike" is passed in the query string
+
+	id, err := strconv.Atoi(userId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	if voteType != "like" && voteType != "dislike" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vote type, the type only 'like' & 'dislike'!"})
+		return
+	}
+
+	user, err := services.GetUserByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User not found!"})
+	}
+
+	// Call service to update company profile with ID 1
+	if err := services.VotedUser(voteType, user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Add feedback for user successfully"})
+}
+
+// Dashboard Handlers
+func TotalDataDashboard(c *gin.Context) {
+	totalUsers, totalLikes, totalDislikes, totalVoted, err := services.TotalDataDashboard()
+	if err != nil {
+		log.Println("Error getting total data dashboard:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve dashboard data"})
+		return
+	}
+
+	// Create a response with the retrieved data
+	response := gin.H{
+		"total_users":    totalUsers,
+		"total_likes":    totalLikes,
+		"total_dislikes": totalDislikes,
+		"total_voted":    totalVoted,
+	}
+
+	// Return the JSON response
+	c.JSON(http.StatusOK, response)
 }

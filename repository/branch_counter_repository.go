@@ -51,9 +51,6 @@ func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, erro
 			return nil, err
 		}
 
-		// Prepend the URL to the image field
-		counter.Image = "http://localhost:3000/images/" + counter.Image
-
 		counters = append(counters, counter)
 	}
 

@@ -16,8 +16,8 @@ func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) 
 	var rows *sql.Rows
 	var err error
 
-	// Handle role-based query: "officier" or not "officier"
-	if role == "officier" {
+	// Handle role-based query: "officer" or not "officer"
+	if role == "officer" {
 		rows, err = config.DB.Query(
 			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role = $3 ORDER BY id ASC LIMIT $1 OFFSET $2",
 			limit, offset, role,
@@ -25,7 +25,7 @@ func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) 
 	} else {
 		rows, err = config.DB.Query(
 			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role != $3 ORDER BY id ASC LIMIT $1 OFFSET $2",
-			limit, offset, "officier",
+			limit, offset, "officer",
 		)
 	}
 
@@ -59,12 +59,12 @@ func GetUsersCount(role string) (int, error) {
 	var count int
 	var row *sql.Row
 
-	if role == "officier" {
+	if role == "officer" {
 		// Use a parameterized query to safely query based on role
-		row = config.DB.QueryRow("SELECT COUNT(*) FROM users WHERE role = 'officier'")
+		row = config.DB.QueryRow("SELECT COUNT(*) FROM users WHERE role = 'officer'")
 	} else {
 		// When role is not provided, count all users
-		row = config.DB.QueryRow("SELECT COUNT(*) FROM users WHERE role != 'officier'")
+		row = config.DB.QueryRow("SELECT COUNT(*) FROM users WHERE role != 'officer'")
 	}
 
 	// Scan the result into the count variable
@@ -174,7 +174,7 @@ func GetAllUsersByBranchOfiice(branchId uint) ([]models.UserByBranchOfiiceRespon
 	var users []models.UserByBranchOfiiceResponse
 
 	// Execute a SELECT query to fetch users by branch_id
-	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1 AND role = 'officier' AND NOT EXISTS ( SELECT 1 FROM	branch_counters WHERE branch_counters.user_id = users.id);", branchId)
+	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1 AND role = 'officer' AND NOT EXISTS ( SELECT 1 FROM	branch_counters WHERE branch_counters.user_id = users.id);", branchId)
 	if err != nil {
 		log.Println("Error fetching users by branch:", err)
 		return nil, err

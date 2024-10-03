@@ -95,9 +95,9 @@ func main() {
 
 	CREATE TABLE IF NOT EXISTS user_feedback_history (
 		id SERIAL PRIMARY KEY,
-		likes INT DEFAULT 1,
-		dislikes INT DEFAULT 1,
-		officier_name VARCHAR(255) NOT NULL,
+		likes INT DEFAULT 0,
+		dislikes INT DEFAULT 0,
+		officer_name VARCHAR(255) NOT NULL,
 		user_id INT NOT NULL,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
 		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
