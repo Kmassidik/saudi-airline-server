@@ -220,7 +220,7 @@ func GetUsersHandler(c *gin.Context) {
 	totalPages := (totalCount + limit - 1) / limit
 
 	for i := range users {
-		users[i].Image = "http://192.168.1.23:3000/images/" + users[i].Image
+		users[i].Image = "http://192.168.1.49:3000/images/" + users[i].Image
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -512,7 +512,7 @@ func GetBranchCounterHandlerByBranchId(c *gin.Context) {
 	}
 
 	for i := range counters {
-		counters[i].Image = "http://192.168.1.23:3000/images/" + counters[i].Image
+		counters[i].Image = "http://192.168.1.49:3000/images/" + counters[i].Image
 	}
 
 	// Return JSON response with counters and total counter
@@ -711,6 +711,7 @@ func TotalDataDashboard(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// Auth
 func LoginWebServerHandler(c *gin.Context) {
 	var input models.LoginRequest
 
@@ -728,6 +729,43 @@ func LoginWebServerHandler(c *gin.Context) {
 
 	// Call the service to authenticate the user
 	user, err := services.AuthenticationLoginUser(input.Email, input.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate JWT token for authenticated users
+	token, err := helpers.GenerateJWT(user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	// Send response with the generated token
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Login successful",
+		"token":   token,
+		"user":    user.FullName,
+	})
+}
+
+func LoginMobileHandler(c *gin.Context) {
+	var input models.LoginMobileRequest
+
+	// Parse request body into the LoginRequest model
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate input using the validation function (assuming you have this in place)
+	if err := validation.CheckLoginUserInput(input.Email, input.Password); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Call the service to authenticate the user
+	user, err := services.AuthenticationLoginUserMobile(input.Email, input.Password, *input.BranchId)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

@@ -13,4 +13,5 @@ type BranchCounterWithNames struct {
 	CounterLocation string `json:"counter_location"`
 	FullName        string `json:"full_name"` // Name from users table
 	Image           string `json:"image"`
+	UserId          uint   `json:"user_id"`
 }

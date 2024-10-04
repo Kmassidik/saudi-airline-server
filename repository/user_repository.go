@@ -203,12 +203,39 @@ func CheckUserAuthentication(email string, password string) (models.User, error)
 	var user models.User
 
 	// Query to retrieve the user by email
-	row := config.DB.QueryRow("SELECT id, full_name, email, role, password, image FROM users WHERE email = $1", email)
-	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password, &user.Image)
+	row := config.DB.QueryRow("SELECT id, full_name, email, role, password FROM users WHERE email = $1", email)
+	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, errors.New("invalid email")
+		}
+		return user, err
+	}
+
+	// Validate the password
+	isValid := helpers.CheckPasswordHashFunc(password, user.Password)
+	if !isValid {
+		return user, errors.New("invalid password")
+	}
+
+	return user, nil
+}
+
+func CheckUserAuthenticationMobile(email string, password string, branchID uint) (models.User, error) {
+	var user models.User
+
+	// Query to retrieve the user by email and branch_id
+	row := config.DB.QueryRow(`
+		SELECT id, full_name, email, role, password, branch_id 
+		FROM users 
+		WHERE email = $1 AND branch_id = $2`, email, branchID)
+
+	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password, &user.BranchId)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return user, errors.New("invalid email or branch ID")
 		}
 		return user, err
 	}

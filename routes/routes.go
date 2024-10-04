@@ -67,5 +67,5 @@ func SetupRoutes(r *gin.Engine) {
 
 	// Authentication
 	r.POST("/login", controllers.LoginWebServerHandler)
-	r.POST("/login-mobile")
+	r.POST("/login-mobile", controllers.LoginMobileHandler)
 }

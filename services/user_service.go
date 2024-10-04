@@ -68,3 +68,18 @@ func AuthenticationLoginUser(email string, password string) (models.User, error)
 
 	return user, nil
 }
+
+func AuthenticationLoginUserMobile(email string, password string, branch_id uint) (models.User, error) {
+	// Call the repository function to check authentication
+	user, err := repository.CheckUserAuthenticationMobile(email, password, branch_id)
+	if err != nil {
+		return user, err
+	}
+
+	// If user is not an admin, return an authorization error
+	if user.Role != "admin" && user.Role != "supervisor" {
+		return user, errors.New("authorization failed: user is not authorized")
+	}
+
+	return user, nil
+}

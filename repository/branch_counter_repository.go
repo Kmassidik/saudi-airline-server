@@ -25,6 +25,7 @@ func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, erro
         SELECT 
             bc.id, 
             bc.counter_location, 
+            u.id AS user_id, 
             u.full_name AS full_name, 
             u.image AS image 
         FROM branch_counters bc
@@ -45,6 +46,7 @@ func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, erro
 		if err := rows.Scan(
 			&counter.ID,
 			&counter.CounterLocation,
+			&counter.UserId,
 			&counter.FullName,
 			&counter.Image,
 		); err != nil {
