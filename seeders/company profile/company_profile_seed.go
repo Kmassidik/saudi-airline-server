@@ -44,7 +44,7 @@ func main() {
 	if count == 0 {
 		seedSQL := `
 		INSERT INTO company_profiles (name, logo) 
-		VALUES ('Sample Company', 'application_logo.jpg');
+		VALUES ('Sample Company', 'application_logo.png');
 		`
 		_, err = db.Exec(seedSQL)
 		if err != nil {

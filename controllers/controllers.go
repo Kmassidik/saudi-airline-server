@@ -189,7 +189,7 @@ func DeleteBranchOfficeHandler(c *gin.Context) {
 func GetUsersHandler(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
 	role := c.DefaultQuery("role", "officer")
-	limitStr := c.DefaultQuery("limit", "5")
+	limitStr := c.DefaultQuery("limit", "10")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
@@ -198,7 +198,7 @@ func GetUsersHandler(c *gin.Context) {
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
-		limit = 5
+		limit = 10
 	}
 
 	offset := (page - 1) * limit
@@ -709,4 +709,41 @@ func TotalDataDashboard(c *gin.Context) {
 
 	// Return the JSON response
 	c.JSON(http.StatusOK, response)
+}
+
+func LoginWebServerHandler(c *gin.Context) {
+	var input models.LoginRequest
+
+	// Parse request body into the LoginRequest model
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate input using the validation function (assuming you have this in place)
+	if err := validation.CheckLoginUserInput(input.Email, input.Password); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Call the service to authenticate the user
+	user, err := services.AuthenticationLoginUser(input.Email, input.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate JWT token for authenticated users
+	token, err := helpers.GenerateJWT(user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	// Send response with the generated token
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Login successful",
+		"token":   token,
+		"user":    user.FullName,
+	})
 }

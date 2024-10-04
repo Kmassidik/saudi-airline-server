@@ -15,7 +15,8 @@ func TotalDataDashboard() (int, int, int, int, error) {
 			SUM(likes) AS total_likes, 
 			SUM(dislikes) AS total_dislikes, 
 			(SELECT COUNT(id) FROM user_feedback_history) AS total_voted 
-		FROM users;`
+		FROM users 
+		WHERE role = 'officer';`
 
 	// Execute the query
 	row := config.DB.QueryRow(query)

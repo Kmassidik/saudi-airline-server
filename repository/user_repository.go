@@ -11,8 +11,8 @@ import (
 )
 
 // GetAllUsers retrieves all users from the database with pagination
-func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) {
-	var users []models.UserResponse
+func GetAllUsers(limit, offset int, role string) ([]models.UserAllResponse, error) {
+	var users []models.UserAllResponse
 	var rows *sql.Rows
 	var err error
 
@@ -36,7 +36,7 @@ func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) 
 	defer rows.Close()
 
 	for rows.Next() {
-		var user models.UserResponse
+		var user models.UserAllResponse
 
 		if err := rows.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image, &user.BranchId); err != nil {
 			log.Println("Error scanning user:", err)
@@ -82,8 +82,8 @@ func GetUserByID(id uint) (*models.User, error) {
 	var user models.User
 
 	// Query to retrieve the user by ID
-	row := config.DB.QueryRow("SELECT id, full_name, email, role, likes, dislikes, image, password FROM users WHERE id = $1", id)
-	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image, &user.Password) // Scan the image name into imageName
+	row := config.DB.QueryRow("SELECT id, full_name, email, role, likes, dislikes, image, branch_id, password  FROM users WHERE id = $1", id)
+	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image, &user.BranchId, &user.Password) // Scan the image name into imageName
 
 	// If no rows are found
 	if err != nil {
@@ -106,7 +106,6 @@ func CreateUser(user *models.User) error {
 		return err
 	}
 	user.Password = hashedPassword
-	log.Println("Inserting user:", user)
 	// Insert the user into the database, including the image path
 	_, err = config.DB.Exec(
 		"INSERT INTO users (full_name, email, password, role, likes, dislikes, image, branch_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
@@ -198,4 +197,27 @@ func GetAllUsersByBranchOfiice(branchId uint) ([]models.UserByBranchOfiiceRespon
 	}
 
 	return users, nil
+}
+
+func CheckUserAuthentication(email string, password string) (models.User, error) {
+	var user models.User
+
+	// Query to retrieve the user by email
+	row := config.DB.QueryRow("SELECT id, full_name, email, role, password, image FROM users WHERE email = $1", email)
+	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password, &user.Image)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return user, errors.New("invalid email")
+		}
+		return user, err
+	}
+
+	// Validate the password
+	isValid := helpers.CheckPasswordHashFunc(password, user.Password)
+	if !isValid {
+		return user, errors.New("invalid password")
+	}
+
+	return user, nil
 }

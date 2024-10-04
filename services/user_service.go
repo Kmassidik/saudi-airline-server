@@ -3,10 +3,11 @@ package services
 import (
 	"api-server/models"
 	"api-server/repository"
+	"errors"
 )
 
 // GetAllUsers retrieves all users with pagination
-func GetAllUsers(limit, offset int, role string) ([]models.UserResponse, error) {
+func GetAllUsers(limit, offset int, role string) ([]models.UserAllResponse, error) {
 	return repository.GetAllUsers(limit, offset, role)
 }
 
@@ -50,4 +51,20 @@ func GetUsersCount(role string) (int, error) {
 
 func GetUsersByBranchID(brancdId uint) ([]models.UserByBranchOfiiceResponse, error) {
 	return repository.GetAllUsersByBranchOfiice(brancdId)
+}
+
+// Authentication
+func AuthenticationLoginUser(email string, password string) (models.User, error) {
+	// Call the repository function to check authentication
+	user, err := repository.CheckUserAuthentication(email, password)
+	if err != nil {
+		return user, err
+	}
+
+	// If user is not an admin, return an authorization error
+	if user.Role != "administrator" && user.Role != "admin" && user.Role != "supervisor" {
+		return user, errors.New("authorization failed: user is not authorized")
+	}
+
+	return user, nil
 }

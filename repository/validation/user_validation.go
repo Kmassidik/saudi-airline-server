@@ -34,8 +34,26 @@ func ValidateUser(user *models.User) error {
 		return errors.New("invalid email format")
 	}
 
-	if user.Role != "admin" && user.Role != "supervisor" && user.Role != "officer" {
-		return errors.New("role must be either 'admin', 'supervisor', or 'officer'")
+	if user.Role != "administrator" && user.Role != "admin" && user.Role != "supervisor" && user.Role != "officer" {
+		return errors.New("role must be either 'administrator' 'admin', 'supervisor', or 'officer'")
+	}
+
+	return nil
+}
+
+func CheckLoginUserInput(email string, password string) error {
+	if email == "" {
+		return errors.New("email cannot be empty")
+	}
+
+	if password == "" {
+		return errors.New("password cannot be empty")
+	}
+
+	emailRegex := `^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`
+	re := regexp.MustCompile(emailRegex)
+	if !re.MatchString(email) {
+		return errors.New("invalid email format")
 	}
 
 	return nil

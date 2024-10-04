@@ -68,7 +68,7 @@ func main() {
 		role VARCHAR(50),
 		likes INT DEFAULT 0,
 		dislikes INT DEFAULT 0,
-		branch_id INT NOT NULL,
+		branch_id INT,
 		FOREIGN KEY (branch_id) REFERENCES branch_offices(id) ON DELETE CASCADE ON UPDATE CASCADE,
 		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP

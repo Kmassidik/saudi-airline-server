@@ -12,6 +12,17 @@ type User struct {
 	BranchId uint   `form:"branch_id"`
 }
 
+type UserAllResponse struct {
+	ID       uint   `json:"id"`
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+	Likes    uint   `json:"likes"`
+	Dislikes uint   `json:"dislikes"`
+	Image    string `json:"image"`
+	BranchId *uint  `json:"branch_id"`
+}
+
 // UserResponse omits the password when retrieving user data (e.g., all users or by ID)
 type UserResponse struct {
 	ID       uint   `json:"id"`
@@ -21,7 +32,7 @@ type UserResponse struct {
 	Likes    uint   `json:"likes"`
 	Dislikes uint   `json:"dislikes"`
 	Image    string `json:"image"`
-	BranchId uint   `json:"branch_id"`
+	BranchId *uint  `json:"branch_id"`
 	Password string `json:"password"`
 }
 

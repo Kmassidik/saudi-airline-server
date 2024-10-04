@@ -64,4 +64,8 @@ func SetupRoutes(r *gin.Engine) {
 		dashboardRoutes.GET("/graph-data")
 		dashboardRoutes.GET("/diagram-data")
 	}
+
+	// Authentication
+	r.POST("/login", controllers.LoginWebServerHandler)
+	r.POST("/login-mobile")
 }
