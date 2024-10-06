@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Service
+  postgres:
+    image: postgres:15.3
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: db_saudi_airlines
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - my_network
+
+  # Go Server Service
+  go-server:
+    build:
+      context: .  # Refers to your current directory where Dockerfile is located
+      dockerfile: Dockerfile
+    container_name: apps
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_NAME: db_saudi_airlines
+      DB_SSLMODE: disable
+      DB_HOST: postgres  # Use the service name 'postgres' within the Docker network
+      URL_IMAGE: http://192.168.1.14:3000/assets/
+      URL_IMAGE_PROFILE: http://192.168.1.14:3000/images/
+      JWT_TOKEN: Sunny@day!2024
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - my_network
+
+volumes:
+  postgres_data:
+
+networks:
+  my_network:

@@ -42,9 +42,15 @@ func main() {
 	fmt.Println("Database seeded successfully!")
 }
 
+// emailExists checks if an email already exists in the users table
+func emailExists(db *sql.DB, email string) (bool, error) {
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email=$1)", email).Scan(&exists)
+	return exists, err
+}
+
 // seedDatabase inserts 10 branch offices and officers for each branch office
 func seedDatabase(db *sql.DB) error {
-
 	// Insert 1 Administrator for each branch office
 	err := insertAdministrator(db)
 	if err != nil {
@@ -76,6 +82,12 @@ func seedDatabase(db *sql.DB) error {
 			if err != nil {
 				return fmt.Errorf("failed to insert officer %d for branch office %d: %w", j, i, err)
 			}
+
+			// Insert feedback for the officer
+			err = insertUserFeedback(db, fmt.Sprintf("Officer %d - %s", j, branchOfficeName), j, 10000, 500) // Example likes and dislikes
+			if err != nil {
+				return fmt.Errorf("failed to insert user feedback for officer %d: %w", j, err)
+			}
 		}
 	}
 
@@ -92,6 +104,16 @@ func insertBranchOffice(db *sql.DB, name string, _ int) error {
 func insertOfficer(db *sql.DB, branchID, officerNum int, branchOfficeName string) error {
 	officerName := fmt.Sprintf("Officer %d - %s", officerNum, branchOfficeName)
 	email := fmt.Sprintf("officer%d_%d@example.com", officerNum, branchID)
+
+	// Check if email exists
+	exists, err := emailExists(db, email)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil // Skip insertion if the email already exists
+	}
+
 	password, err := helpers.HashingPasswordFunc("password123")
 	if err != nil {
 		return err
@@ -103,10 +125,26 @@ func insertOfficer(db *sql.DB, branchID, officerNum int, branchOfficeName string
 	return err
 }
 
+// insertUserFeedback inserts user feedback into the user_feedback_history table
+func insertUserFeedback(db *sql.DB, officerName string, userID, likes, dislikes int) error {
+	_, err := db.Exec("INSERT INTO user_feedback_history (likes, dislikes, officer_name, user_id) VALUES ($1, $2, $3, $4)", likes, dislikes, officerName, userID)
+	return err
+}
+
 // insertAdministrator inserts an administrator for a specific branch office
 func insertAdministrator(db *sql.DB) error {
 	adminName := "Administrator"
 	email := "administrator@example.com"
+
+	// Check if email exists
+	exists, err := emailExists(db, email)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil // Skip insertion if the email already exists
+	}
+
 	password, err := helpers.HashingPasswordFunc("123456")
 	if err != nil {
 		return err
@@ -122,6 +160,16 @@ func insertAdministrator(db *sql.DB) error {
 func insertAdmin(db *sql.DB, branchID int, branchOfficeName string) error {
 	adminName := fmt.Sprintf("Admin - %s", branchOfficeName)
 	email := fmt.Sprintf("admin_%d@example.com", branchID)
+
+	// Check if email exists
+	exists, err := emailExists(db, email)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil // Skip insertion if the email already exists
+	}
+
 	password, err := helpers.HashingPasswordFunc("password123")
 	if err != nil {
 		return err
@@ -137,6 +185,16 @@ func insertAdmin(db *sql.DB, branchID int, branchOfficeName string) error {
 func insertSupervisor(db *sql.DB, branchID int, branchOfficeName string) error {
 	supervisorName := fmt.Sprintf("Supervisor - %s", branchOfficeName)
 	email := fmt.Sprintf("supervisor_%d@example.com", branchID)
+
+	// Check if email exists
+	exists, err := emailExists(db, email)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil // Skip insertion if the email already exists
+	}
+
 	password, err := helpers.HashingPasswordFunc("password123")
 	if err != nil {
 		return err

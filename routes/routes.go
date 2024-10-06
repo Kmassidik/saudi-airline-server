@@ -10,7 +10,7 @@ func SetupRoutes(r *gin.Engine) {
 	// Welcome to API
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": "Welcome to API Saudi Airlines",
+			"message": "Welcome to API Saudi Airlines test",
 		})
 	})
 
