@@ -31,8 +31,13 @@ func TotalDataDashboard() (int, int, int, int, error) {
 	return totalUsers, totalLikes, totalDislikes, totalVoted, nil
 }
 
-func GraphDataDashboard() {
+func TotalDataBranchDashboard(id uint, option string) error {
 
+	if option == "week" {
+	} else if option == "month" {
+
+	}
+	return nil
 }
 
 func DiagramDataDashboard() {

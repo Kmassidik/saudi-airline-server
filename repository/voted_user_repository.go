@@ -9,6 +9,7 @@ import (
 func VotedUserLike(voteType string, data *models.User) error {
 	// Get the user ID from data
 	userId := data.ID
+	branchId := data.BranchId
 	officerName := data.FullName
 
 	// Prepare the query to update the users table
@@ -27,7 +28,7 @@ func VotedUserLike(voteType string, data *models.User) error {
 	}
 
 	// Prepare the insert query for user_feedback_history
-	insertQuery := `INSERT INTO user_feedback_history (likes, dislikes, officer_name, user_id) VALUES ($1, $2, $3, $4)`
+	insertQuery := `INSERT INTO user_feedback_history (likes, dislikes, officer_name, user_id, branch_id) VALUES ($1, $2, $3, $4, $5)`
 	likes := 0
 	dislikes := 0
 
@@ -38,7 +39,7 @@ func VotedUserLike(voteType string, data *models.User) error {
 	}
 
 	// Insert feedback history
-	if _, err := config.DB.Exec(insertQuery, likes, dislikes, officerName, userId); err != nil {
+	if _, err := config.DB.Exec(insertQuery, likes, dislikes, officerName, userId, branchId); err != nil {
 		return err
 	}
 

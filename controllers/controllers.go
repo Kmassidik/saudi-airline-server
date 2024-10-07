@@ -220,7 +220,7 @@ func GetUsersHandler(c *gin.Context) {
 	totalPages := (totalCount + limit - 1) / limit
 
 	for i := range users {
-		users[i].Image = "http://192.168.1.49:3000/images/" + users[i].Image
+		users[i].Image = os.Getenv("URL_IMAGE_PROFILE") + users[i].Image
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -512,7 +512,7 @@ func GetBranchCounterHandlerByBranchId(c *gin.Context) {
 	}
 
 	for i := range counters {
-		counters[i].Image = "http://192.168.1.49:3000/images/" + counters[i].Image
+		counters[i].Image = os.Getenv("URL_IMAGE_PROFILE") + counters[i].Image
 	}
 
 	// Return JSON response with counters and total counter
@@ -709,6 +709,25 @@ func TotalDataDashboard(c *gin.Context) {
 
 	// Return the JSON response
 	c.JSON(http.StatusOK, response)
+}
+
+func TotalDataWithBranchIdHandler(c *gin.Context) {
+	// id := c.Param("branchOfficeId")
+	// option := c.DefaultQuery("option", "date")
+
+	// branchId, err = strconv.Atoi(id)
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+	// 	return
+	// }
+}
+
+func TotalLikeDislikeBranchOfficeHandler(c *gin.Context) {
+
+}
+
+func TotalLikeDislikeOfficerHandler(c *gin.Context) {
+
 }
 
 // Auth

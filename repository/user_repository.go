@@ -225,24 +225,25 @@ func CheckUserAuthentication(email string, password string) (models.User, error)
 func CheckUserAuthenticationMobile(email string, password string, branchID uint) (models.User, error) {
 	var user models.User
 
-	// Query to retrieve the user by email and branch_id
-	row := config.DB.QueryRow(`
+	err := config.DB.QueryRow(`
 		SELECT id, full_name, email, role, password, branch_id 
 		FROM users 
-		WHERE email = $1 AND branch_id = $2`, email, branchID)
-
-	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password, &user.BranchId)
+		WHERE email = $1`, email).Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password, &user.BranchId)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return user, errors.New("invalid email or branch ID")
+			return user, errors.New("email not found")
 		}
 		return user, err
 	}
 
-	// Validate the password
+	if user.BranchId != branchID {
+		return user, errors.New("invalid branch office")
+	}
+
 	isValid := helpers.CheckPasswordHashFunc(password, user.Password)
 	if !isValid {
+		log.Printf("Invalid password for user: %s", email)
 		return user, errors.New("invalid password")
 	}
 

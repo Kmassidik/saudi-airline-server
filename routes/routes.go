@@ -61,8 +61,9 @@ func SetupRoutes(r *gin.Engine) {
 	dashboardRoutes := r.Group("/dashboard")
 	{
 		dashboardRoutes.GET("/total-data", controllers.TotalDataDashboard)
-		dashboardRoutes.GET("/graph-data")
-		dashboardRoutes.GET("/diagram-data")
+		dashboardRoutes.GET("/graph-data-month/:branchOfficeId", controllers.TotalDataWithBranchIdHandler)
+		dashboardRoutes.GET("/diagram-data-branch-office", controllers.TotalLikeDislikeBranchOfficeHandler)
+		dashboardRoutes.GET("/diagram-data-officer", controllers.TotalLikeDislikeOfficerHandler)
 	}
 
 	// Authentication
