@@ -10,14 +10,7 @@ func TotalDataDashboard() (int, int, int, int, error) {
 	var totalUsers, totalLikes, totalDislikes, totalVoted int
 
 	// Combine all counts into a single query
-	query := `
-		SELECT 
-			COUNT(id) AS total_users, 
-			SUM(likes) AS total_likes, 
-			SUM(dislikes) AS total_dislikes, 
-			(SELECT COUNT(id) FROM user_feedback_history) AS total_voted 
-		FROM users 
-		WHERE role = 'officer';`
+	query := `SELECT total_officer, total_likes, total_dislikes, total_voted FROM total_data WHERE id = 1;`
 
 	// Execute the query
 	row := config.DB.QueryRow(query)
@@ -41,7 +34,7 @@ func TotalDataBranchDashboard(id uint, option string) error {
 	return nil
 }
 
-func DiagramDataDashboard() {
+func TotalDataOfficerDashboard() {
 
 }
 
@@ -62,7 +55,6 @@ func UpdateDashboard(branchId uint, voteType string) error {
 	default:
 		return fmt.Errorf("invalid vote type")
 	}
-
 	// Execute total_data update
 	if _, err := config.DB.Exec(totalUpdateQuery); err != nil {
 		return fmt.Errorf("failed to update total_data: %v", err)

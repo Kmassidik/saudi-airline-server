@@ -737,6 +737,25 @@ func TotalLikeDislikeOfficerHandler(c *gin.Context) {
 
 }
 
+func UpdateDataDashboardHandler(c *gin.Context) {
+	voteType := c.DefaultQuery("option", "like")
+
+	id := c.Param("branchId")
+	branchId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid branch ID"})
+		return
+	}
+
+	err = services.UpdateDataDashboard(uint(branchId), voteType)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Dashboard updated successfully"})
+}
+
 // Auth
 func LoginWebServerHandler(c *gin.Context) {
 	var input models.LoginRequest

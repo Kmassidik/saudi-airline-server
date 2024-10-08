@@ -64,6 +64,7 @@ func SetupRoutes(r *gin.Engine) {
 		dashboardRoutes.GET("/graph-data/:branchOfficeId", controllers.TotalDataWithBranchIdHandler)
 		dashboardRoutes.GET("/total-vote-office", controllers.TotalLikeDislikeBranchOfficeHandler)
 		dashboardRoutes.GET("/vote-data-officer", controllers.TotalLikeDislikeOfficerHandler)
+		dashboardRoutes.PATCH("/update/:branchId", controllers.UpdateDataDashboardHandler)
 	}
 
 	// Authentication
