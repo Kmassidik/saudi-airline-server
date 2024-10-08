@@ -79,16 +79,43 @@ func GetBranchOfficesById(id uint) (*models.BranchOfficeResponse, error) {
 	return &branchOffice, nil
 }
 
-// CreateBranchOffices creates a new branch office
-func CreateBranchOffices(branchOffice *models.BranchOfficeCreateRequest) error {
+// CreateBranchOffice creates a new branch office and returns its ID.
+func CreateBranchOffice(branchOffice *models.BranchOfficeCreateRequest) error {
+	// Begin a new transaction
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() // Rollback in case of an error
 
-	_, err := config.DB.Exec("INSERT INTO branch_offices (name, address, total_counter) VALUES ($1, $2, $3)",
-		branchOffice.Name, branchOffice.Address, branchOffice.TotalCounter)
+	var branchID int
+	// Insert the branch office and retrieve the generated ID
+	err = tx.QueryRow(
+		"INSERT INTO branch_offices (name, address, total_counter) VALUES ($1, $2, $3) RETURNING id",
+		branchOffice.Name, branchOffice.Address, branchOffice.TotalCounter,
+	).Scan(&branchID)
 	if err != nil {
 		log.Println("Error creating branch office:", err)
 		return err
 	}
-	return nil
+
+	// Insert into total_data_branch using the generated branch ID
+	_, err = tx.Exec(
+		"INSERT INTO total_data_branch (name_office, total_likes, total_dislikes, branch_id) VALUES ($1, $2, $3, $4)",
+		branchOffice.Name, 0, 0, branchID,
+	)
+	if err != nil {
+		log.Println("Error creating total data for branch office:", err)
+		return err
+	}
+
+	// Commit the transaction if everything is successful
+	if err = tx.Commit(); err != nil {
+		log.Println("Error committing transaction:", err)
+		return err
+	}
+
+	return nil // Return the branch ID on success
 }
 
 // UpdateBranchOffices updates an existing branch office by ID

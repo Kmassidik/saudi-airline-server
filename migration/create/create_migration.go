@@ -50,6 +50,7 @@ func main() {
 
 	// Define the SQL migration script
 	migrationSQL := `
+	-- Create branch_offices table
 	CREATE TABLE IF NOT EXISTS branch_offices (
 		id SERIAL PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
@@ -59,6 +60,7 @@ func main() {
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
+	-- Create users table
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		full_name VARCHAR(255) NOT NULL,
@@ -74,6 +76,7 @@ func main() {
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
+	-- Create branch_counters table
 	CREATE TABLE IF NOT EXISTS branch_counters (
 		id SERIAL PRIMARY KEY,
 		counter_location VARCHAR(255) NOT NULL,
@@ -85,6 +88,7 @@ func main() {
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
+	-- Create company_profiles table
 	CREATE TABLE IF NOT EXISTS company_profiles (
 		id SERIAL PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
@@ -93,6 +97,7 @@ func main() {
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
+	-- Create user_feedback_history table
 	CREATE TABLE IF NOT EXISTS user_feedback_history (
 		id SERIAL PRIMARY KEY,
 		likes INT DEFAULT 0,
@@ -106,13 +111,36 @@ func main() {
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
+	-- Create total_data table
+	CREATE TABLE IF NOT EXISTS total_data (
+		id SERIAL PRIMARY KEY,
+		total_likes INT DEFAULT 0,
+		total_dislikes INT DEFAULT 0,
+		total_officer INT DEFAULT 0,
+		total_voted INT DEFAULT 0,
+		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
+	-- Create total_data_branch table
+	CREATE TABLE IF NOT EXISTS total_data_branch (
+		id SERIAL PRIMARY KEY,
+		name_office VARCHAR(255) NOT NULL,
+		total_likes INT DEFAULT 0,
+		total_dislikes INT DEFAULT 0,
+		branch_id INT NOT NULL,
+		FOREIGN KEY (branch_id) REFERENCES branch_offices(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
 	-- Create function to automatically update 'updatedAt' timestamp
 	CREATE OR REPLACE FUNCTION update_timestamp_column()
-	RETURNS TRIGGER AS $$
-	BEGIN
-		NEW.updatedAt = NOW();
-		RETURN NEW;
-	END;
+	RETURNS TRIGGER AS $$ 
+	BEGIN 
+		NEW.updatedAt = NOW(); 
+		RETURN NEW; 
+	END; 
 	$$ LANGUAGE plpgsql;
 
 	-- Create triggers to update 'updatedAt' on row update for all tables
@@ -140,7 +168,7 @@ func main() {
 	BEFORE UPDATE ON user_feedback_history
 	FOR EACH ROW
 	EXECUTE FUNCTION update_timestamp_column();
-	`
+`
 
 	// Execute the migration script
 	_, err = db.Exec(migrationSQL)

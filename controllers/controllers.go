@@ -713,13 +713,20 @@ func TotalDataDashboard(c *gin.Context) {
 
 func TotalDataWithBranchIdHandler(c *gin.Context) {
 	// id := c.Param("branchOfficeId")
-	// option := c.DefaultQuery("option", "date")
+	// option := c.DefaultQuery("option", "week")
 
 	// branchId, err = strconv.Atoi(id)
 	// if err != nil {
 	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 	// 	return
 	// }
+
+	// Send response with the generated token
+	c.JSON(http.StatusOK, gin.H{
+		"name-branch-officer": "Branch Office 1",
+		"data-likes":          []int{0, 1, 1, 2, 3, 4},
+		"data-dislike":        []int{0, 1, 1, 2, 3, 4},
+	})
 }
 
 func TotalLikeDislikeBranchOfficeHandler(c *gin.Context) {

@@ -21,7 +21,7 @@ func GetBranchOfficeByID(id uint) (*models.BranchOfficeResponse, error) {
 
 // CreateBranchOffice creates a new branch office
 func CreateBranchOffice(branchOffice *models.BranchOfficeCreateRequest) error {
-	if err := repository.CreateBranchOffices(branchOffice); err != nil {
+	if err := repository.CreateBranchOffice(branchOffice); err != nil {
 		return err
 	}
 

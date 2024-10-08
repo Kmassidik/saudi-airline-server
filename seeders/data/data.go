@@ -42,13 +42,18 @@ func main() {
 	fmt.Println("Database seeded successfully!")
 }
 
-// seedDatabase inserts 10 branch offices and officers for each branch office
+// seedDatabase inserts branch offices and associated users
 func seedDatabase(db *sql.DB) error {
 
-	// Insert 1 Administrator for each branch office
+	errTotalData := insertTotalData(db)
+	if errTotalData != nil {
+		return fmt.Errorf("failed to insert total data: %w", errTotalData)
+	}
+
+	// Insert 1 Administrator
 	err := insertAdministrator(db)
 	if err != nil {
-		return fmt.Errorf("failed to insert administrator for branch office: %w", err)
+		return fmt.Errorf("failed to insert administrator: %w", err)
 	}
 
 	for i := 1; i <= 10; i++ {
@@ -77,15 +82,15 @@ func seedDatabase(db *sql.DB) error {
 				return fmt.Errorf("failed to insert officer %d for branch office %d: %w", j, i, err)
 			}
 		}
+
+		// Insert total branch office data
+		err = insertTotalBranchOffices(db, i, branchOfficeName)
+		if err != nil {
+			return fmt.Errorf("failed to insert total branch office data for %d: %w", i, err)
+		}
 	}
 
 	return nil
-}
-
-// insertBranchOffice inserts a branch office into the database
-func insertBranchOffice(db *sql.DB, name string, _ int) error {
-	_, err := db.Exec("INSERT INTO branch_offices (name, address, total_counter) VALUES ($1, $2, $3)", name, fmt.Sprintf("Address of %s", name), 10)
-	return err
 }
 
 // insertOfficer inserts an officer for a specific branch office
@@ -103,7 +108,7 @@ func insertOfficer(db *sql.DB, branchID, officerNum int, branchOfficeName string
 	return err
 }
 
-// insertAdministrator inserts an administrator for a specific branch office
+// insertAdministrator inserts an administrator for the main branch
 func insertAdministrator(db *sql.DB) error {
 	adminName := "Administrator"
 	email := "administrator@example.com"
@@ -138,12 +143,32 @@ func insertSupervisor(db *sql.DB, branchID int, branchOfficeName string) error {
 	supervisorName := fmt.Sprintf("Supervisor - %s", branchOfficeName)
 	email := fmt.Sprintf("supervisor_%d@example.com", branchID)
 	password, err := helpers.HashingPasswordFunc("password123")
+
 	if err != nil {
 		return err
 	}
+
 	image := "supervisor.png"
 	role := "supervisor"
 
 	_, err = db.Exec("INSERT INTO users (full_name, email, password, image, role, branch_id) VALUES ($1, $2, $3, $4, $5, $6)", supervisorName, email, password, image, role, branchID)
+	return err
+}
+
+// insertBranchOffice inserts a branch office into the database
+func insertBranchOffice(db *sql.DB, name string, totalCounters int) error {
+	_, err := db.Exec("INSERT INTO branch_offices (name, address, total_counter) VALUES ($1, $2, $3)", name, fmt.Sprintf("Address of %s", name), totalCounters)
+	return err
+}
+
+// insertTotalBranchOffices inserts total data for branch offices
+func insertTotalBranchOffices(db *sql.DB, branchID int, officeName string) error {
+	_, err := db.Exec("INSERT INTO total_data_branch (name_office, total_likes, total_dislikes, branch_id) VALUES ($1, $2, $3, $4)", officeName, 0, 0, branchID)
+	return err
+}
+
+// insertTotalBranchOffices inserts total data for branch offices
+func insertTotalData(db *sql.DB) error {
+	_, err := db.Exec("INSERT INTO total_data (total_likes,total_dislikes,total_officer,total_voted) VALUES ($1, $2, $3, $4)", 0, 0, 0, 0)
 	return err
 }
