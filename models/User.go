@@ -53,3 +53,10 @@ type UserByBranchOfiiceResponse struct {
 	ID       uint   `json:"id"`
 	FullName string `json:"full_name"`
 }
+
+// UserDetailResponse for more detailed responses, again without exposing the password
+type DashboardUsers struct {
+	Name     string `json:"full_name"`
+	Likes    uint   `json:"likes"`
+	Dislikes uint   `json:"dislikes"`
+}

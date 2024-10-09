@@ -692,7 +692,7 @@ func VotedUserHandler(c *gin.Context) {
 
 // Dashboard Handlers
 func TotalDataDashboard(c *gin.Context) {
-	totalUsers, totalLikes, totalDislikes, totalVoted, err := services.TotalDataDashboard()
+	totalOfficer, totalLikes, totalDislikes, totalVoted, err := services.TotalDataDashboard()
 	if err != nil {
 		log.Println("Error getting total data dashboard:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve dashboard data"})
@@ -701,7 +701,7 @@ func TotalDataDashboard(c *gin.Context) {
 
 	// Create a response with the retrieved data
 	response := gin.H{
-		"total_users":    totalUsers,
+		"total_officer":  totalOfficer,
 		"total_likes":    totalLikes,
 		"total_dislikes": totalDislikes,
 		"total_voted":    totalVoted,
@@ -711,26 +711,54 @@ func TotalDataDashboard(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func TotalDataWithBranchIdHandler(c *gin.Context) {
-	// id := c.Param("branchOfficeId")
-	// option := c.DefaultQuery("option", "week")
+func TotalLikeDislikeBranchOfficeHandler(c *gin.Context) {
+	result, err := repository.TotalDataBranchDashboard()
+	if err != nil {
+		log.Println("Error getting total data dashboard:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve dashboard data"})
+		return
+	}
 
-	// branchId, err = strconv.Atoi(id)
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-	// 	return
-	// }
-
-	// Send response with the generated token
-	c.JSON(http.StatusOK, gin.H{
-		"name-branch-officer": "Branch Office 1",
-		"data-likes":          []int{0, 1, 1, 2, 3, 4},
-		"data-dislike":        []int{0, 1, 1, 2, 3, 4},
-	})
+	c.JSON(http.StatusOK, result)
 }
 
-func TotalLikeDislikeBranchOfficeHandler(c *gin.Context) {
+func TotalDataOfficerHandler(c *gin.Context) {
+	pageStr := c.DefaultQuery("pages", "1")
+	limitStr := c.DefaultQuery("limit", "10")
 
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	// Use the service layer to get the branch offices
+	officer, err := services.GetAllOfficers(uint(limit), uint(offset))
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	// Fetch the total branch office count
+	totalCount, err := repository.GetUsersCount("officer")
+	if err != nil {
+		c.Error(err) // Pass error to the middleware
+		return
+	}
+
+	totalPages := (totalCount + limit - 1) / limit
+
+	c.JSON(http.StatusOK, gin.H{
+		"page":        page,
+		"total_pages": totalPages,
+		"officer":     officer,
+	})
 }
 
 func TotalLikeDislikeOfficerHandler(c *gin.Context) {

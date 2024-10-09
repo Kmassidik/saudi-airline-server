@@ -106,13 +106,43 @@ func CreateUser(user *models.User) error {
 		return err
 	}
 	user.Password = hashedPassword
+
+	// Begin a transaction to ensure atomicity
+	tx, err := config.DB.Begin()
+	if err != nil {
+		log.Println("Error starting transaction:", err)
+		return err
+	}
+
+	// Defer rollback to ensure any error during execution rolls back the transaction
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	// Insert the user into the database, including the image path
-	_, err = config.DB.Exec(
+	_, err = tx.Exec(
 		"INSERT INTO users (full_name, email, password, role, likes, dislikes, image, branch_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
 		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, user.Image, user.BranchId,
 	)
 	if err != nil {
 		log.Println("Error inserting user:", err)
+		return err
+	}
+
+	// Update total officer count only if the user's role is "officer"
+	if user.Role == "officer" {
+		_, err = tx.Exec("UPDATE total_data SET total_officer = total_officer + 1 WHERE id = 1")
+		if err != nil {
+			log.Println("Error updating total_officer:", err)
+			return err
+		}
+	}
+
+	// Commit the transaction if no errors
+	if err = tx.Commit(); err != nil {
+		log.Println("Error committing transaction:", err)
 		return err
 	}
 
@@ -158,11 +188,49 @@ func UpdateUser(id uint, user *models.User) error {
 	return nil
 }
 
-// DeleteUser deletes a user by ID from the database
+// DeleteUser removes a user from the database and decrements the total officer count if the user is an officer
 func DeleteUser(id uint) error {
-	_, err := config.DB.Exec("DELETE FROM users WHERE id = $1", id)
+	// Begin a transaction to ensure atomicity
+	tx, err := config.DB.Begin()
+	if err != nil {
+		log.Println("Error starting transaction:", err)
+		return err
+	}
+
+	// Defer rollback to ensure any error during execution rolls back the transaction
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Get the user's role before deletion
+	var role string
+	err = tx.QueryRow("SELECT role FROM users WHERE id = $1", id).Scan(&role)
+	if err != nil {
+		log.Println("Error fetching user role:", err)
+		return err
+	}
+
+	// Delete the user from the users table
+	_, err = tx.Exec("DELETE FROM users WHERE id = $1", id)
 	if err != nil {
 		log.Println("Error deleting user:", err)
+		return err
+	}
+
+	// Decrement total officer count only if the user's role is "officer"
+	if role == "officer" {
+		_, err = tx.Exec("UPDATE total_data SET total_officer = total_officer - 1 WHERE id = 1")
+		if err != nil {
+			log.Println("Error updating total_officer:", err)
+			return err
+		}
+	}
+
+	// Commit the transaction if no errors
+	if err = tx.Commit(); err != nil {
+		log.Println("Error committing transaction:", err)
 		return err
 	}
 

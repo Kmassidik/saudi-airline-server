@@ -20,3 +20,11 @@ type BranchOfficeOptionResponse struct {
 type BranchOfficeListResponse struct {
 	Offices []BranchOfficeResponse `json:"offices"`
 }
+
+type BranchData struct {
+	ID            int    `json:"id"`
+	NameOffice    string `json:"name_office"`
+	TotalLikes    int    `json:"total_likes"`
+	TotalDislikes int    `json:"total_dislikes"`
+	BranchID      int    `json:"branch_id"`
+}
