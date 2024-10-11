@@ -76,6 +76,9 @@ func main() {
 		updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
+	-- Add index on role column
+	CREATE INDEX idx_users_role ON users (role);
+
 	-- Create branch_counters table
 	CREATE TABLE IF NOT EXISTS branch_counters (
 		id SERIAL PRIMARY KEY,

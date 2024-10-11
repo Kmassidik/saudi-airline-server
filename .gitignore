@@ -58,3 +58,7 @@ coverage.out
 
 public/images/*.png
 public/assets/*.png
+
+# Unignore specific directories in the seeders folder
+seeders/company-profile/
+seeders/data/
