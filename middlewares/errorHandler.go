@@ -34,6 +34,14 @@ func ErrorHandler() gin.HandlerFunc {
 				return
 			}
 
+			// Check if the error message matches "branch office not found"
+			if err.Error() == "branch office not found" {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": "Branch office not found!",
+				})
+				return
+			}
+
 			// Handle generic errors
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "An internal error occurred",

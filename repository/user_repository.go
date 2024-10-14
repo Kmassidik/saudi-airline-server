@@ -19,13 +19,13 @@ func GetAllUsers(limit, offset int, role string) ([]models.UserAllResponse, erro
 	// Handle role-based query: "officer" or not "officer"
 	if role == "officer" {
 		rows, err = config.DB.Query(
-			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role = $3 ORDER BY id ASC LIMIT $1 OFFSET $2",
-			limit, offset, role,
+			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role = ? ORDER BY id ASC LIMIT ? OFFSET ?",
+			role, limit, offset,
 		)
 	} else {
 		rows, err = config.DB.Query(
-			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role != $3 ORDER BY id ASC LIMIT $1 OFFSET $2",
-			limit, offset, "officer",
+			"SELECT id, full_name, email, role, likes, dislikes, image, branch_id FROM users WHERE role != ? ORDER BY id ASC LIMIT ? OFFSET ?",
+			"officer", limit, offset,
 		)
 	}
 
@@ -82,8 +82,8 @@ func GetUserByID(id uint) (*models.User, error) {
 	var user models.User
 
 	// Query to retrieve the user by ID
-	row := config.DB.QueryRow("SELECT id, full_name, email, role, likes, dislikes, image, branch_id, password  FROM users WHERE id = $1", id)
-	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image, &user.BranchId, &user.Password) // Scan the image name into imageName
+	row := config.DB.QueryRow("SELECT id, full_name, email, role, likes, dislikes, image, branch_id, password FROM users WHERE id = ?", id)
+	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Likes, &user.Dislikes, &user.Image, &user.BranchId, &user.Password)
 
 	// If no rows are found
 	if err != nil {
@@ -123,7 +123,7 @@ func CreateUser(user *models.User) error {
 
 	// Insert the user into the database, including the image path
 	_, err = tx.Exec(
-		"INSERT INTO users (full_name, email, password, role, likes, dislikes, image, branch_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+		"INSERT INTO users (full_name, email, password, role, likes, dislikes, image, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 		user.FullName, user.Email, user.Password, user.Role, user.Likes, user.Dislikes, user.Image, user.BranchId,
 	)
 	if err != nil {
@@ -156,6 +156,16 @@ func UpdateUser(id uint, user *models.User) error {
 		return err
 	}
 
+	// Check if the branch exists before proceeding
+	exists, err := GetBranchOfficesById(user.BranchId)
+	if err != nil {
+		return err
+	}
+
+	if exists == nil {
+		return errors.New("branch_id does not exist")
+	}
+
 	// Hash the password if it's not empty (meaning it's being updated)
 	if user.Password != "" {
 		hashedPassword, err := helpers.HashingPasswordFunc(user.Password)
@@ -166,25 +176,44 @@ func UpdateUser(id uint, user *models.User) error {
 		user.Password = string(hashedPassword) // Store the hashed password
 	}
 
+	// Begin a transaction to ensure atomicity
+	tx, err := config.DB.Begin()
+	if err != nil {
+		log.Println("Error starting transaction:", err)
+		return err
+	}
+
+	// Defer rollback to ensure any error during execution rolls back the transaction
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	// Prepare the SQL query
 	var query string
 	if user.Image != "" {
-		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, image = $5, branch_id = $6 WHERE id = $7"
-		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Image, user.BranchId, id)
+		query = "UPDATE users SET full_name = ?, email = ?, password = ?, role = ?, image = ?, branch_id = ? WHERE id = ?"
+		_, err := tx.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Image, user.BranchId, id)
 		if err != nil {
 			log.Println("Error updating user:", err)
 			return err
 		}
 	} else {
-		query = "UPDATE users SET full_name = $1, email = $2, password = $3, role = $4, branch_id = $5 WHERE id = $6"
-		_, err := config.DB.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.BranchId, id)
+		query = "UPDATE users SET full_name = ?, email = ?, password = ?, role = ?, branch_id = ? WHERE id = ?"
+		_, err := tx.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.BranchId, id)
 		if err != nil {
 			log.Println("Error updating user:", err)
 			return err
 		}
 	}
 
-	// No need to query the database again to get the existing image
+	// Commit the transaction if no errors
+	if err = tx.Commit(); err != nil {
+		log.Println("Error committing transaction:", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -206,14 +235,14 @@ func DeleteUser(id uint) error {
 
 	// Get the user's role before deletion
 	var role string
-	err = tx.QueryRow("SELECT role FROM users WHERE id = $1", id).Scan(&role)
+	err = tx.QueryRow("SELECT role FROM users WHERE id = ?", id).Scan(&role)
 	if err != nil {
 		log.Println("Error fetching user role:", err)
 		return err
 	}
 
 	// Delete the user from the users table
-	_, err = tx.Exec("DELETE FROM users WHERE id = $1", id)
+	_, err = tx.Exec("DELETE FROM users WHERE id = ?", id)
 	if err != nil {
 		log.Println("Error deleting user:", err)
 		return err
@@ -241,14 +270,14 @@ func GetAllUsersByBranchOfiice(branchId uint) ([]models.UserByBranchOfiiceRespon
 	var users []models.UserByBranchOfiiceResponse
 
 	// Execute a SELECT query to fetch users by branch_id
-	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = $1 AND role = 'officer' AND NOT EXISTS ( SELECT 1 FROM	branch_counters WHERE branch_counters.user_id = users.id);", branchId)
+	rows, err := config.DB.Query("SELECT id, full_name FROM users WHERE branch_id = ? AND role = 'officer' AND NOT EXISTS ( SELECT 1 FROM branch_counters WHERE branch_counters.user_id = users.id);", branchId)
 	if err != nil {
-		log.Println("Error fetching users by branch:", err)
+		log.Println("Error querying users:", err)
 		return nil, err
 	}
 	defer rows.Close()
 
-	// Loop through the rows and scan each user
+	// Scan the result rows into the users slice
 	for rows.Next() {
 		var user models.UserByBranchOfiiceResponse
 		if err := rows.Scan(&user.ID, &user.FullName); err != nil {
@@ -258,20 +287,21 @@ func GetAllUsersByBranchOfiice(branchId uint) ([]models.UserByBranchOfiiceRespon
 		users = append(users, user)
 	}
 
-	// Check for any errors during row iteration
 	if err := rows.Err(); err != nil {
-		log.Println("Error during row iteration:", err)
+		log.Println("Error after iteration:", err)
 		return nil, err
 	}
 
 	return users, nil
 }
 
+// CheckUserAuthentication checks if the user exists with the given email and password.
 func CheckUserAuthentication(email string, password string) (models.User, error) {
 	var user models.User
 
 	// Query to retrieve the user by email
-	row := config.DB.QueryRow("SELECT id, full_name, email, role, password FROM users WHERE email = $1", email)
+	query := "SELECT id, full_name, email, role, password FROM users WHERE email = ?"
+	row := config.DB.QueryRow(query, email)
 	err := row.Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password)
 
 	if err != nil {
@@ -282,21 +312,23 @@ func CheckUserAuthentication(email string, password string) (models.User, error)
 	}
 
 	// Validate the password
-	isValid := helpers.CheckPasswordHashFunc(password, user.Password)
-	if !isValid {
+	if !helpers.CheckPasswordHashFunc(password, user.Password) {
 		return user, errors.New("invalid password")
 	}
 
 	return user, nil
 }
 
+// CheckUserAuthenticationMobile checks if the user exists with the given email, password, and branch ID.
 func CheckUserAuthenticationMobile(email string, password string, branchID uint) (models.User, error) {
 	var user models.User
 
-	err := config.DB.QueryRow(`
+	// Query to retrieve the user by email, including branch ID
+	query := `
 		SELECT id, full_name, email, role, password, branch_id 
 		FROM users 
-		WHERE email = $1`, email).Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password, &user.BranchId)
+		WHERE email = ?`
+	err := config.DB.QueryRow(query, email).Scan(&user.ID, &user.FullName, &user.Email, &user.Role, &user.Password, &user.BranchId)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -305,12 +337,13 @@ func CheckUserAuthenticationMobile(email string, password string, branchID uint)
 		return user, err
 	}
 
+	// Validate the branch ID
 	if user.BranchId != branchID {
 		return user, errors.New("invalid branch office")
 	}
 
-	isValid := helpers.CheckPasswordHashFunc(password, user.Password)
-	if !isValid {
+	// Validate the password
+	if !helpers.CheckPasswordHashFunc(password, user.Password) {
 		log.Printf("Invalid password for user: %s", email)
 		return user, errors.New("invalid password")
 	}

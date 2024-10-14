@@ -129,15 +129,18 @@ func CreateBranchOffice(branchOffice *models.BranchOfficeCreateRequest) error {
 
 // UpdateBranchOffices updates an existing branch office by ID
 func UpdateBranchOffices(id uint, branchOffice *models.BranchOfficeCreateRequest) error {
-	result, err := config.DB.Exec("UPDATE branch_offices SET name = ?, address = ?, total_counter = ? WHERE id = ?",
+
+	_, errFoundId := GetBranchOfficesById(id)
+	if errFoundId != nil {
+		log.Println("Branch Office not found:", errFoundId)
+		return errFoundId
+	}
+
+	_, err := config.DB.Exec("UPDATE branch_offices SET name = ?, address = ?, total_counter = ? WHERE id = ?",
 		branchOffice.Name, branchOffice.Address, branchOffice.TotalCounter, id)
 	if err != nil {
 		log.Println("Error updating branch office:", err)
 		return err
-	}
-
-	if rowsAffected, _ := result.RowsAffected(); rowsAffected == 0 {
-		return fmt.Errorf("no branch office found with the given ID: %d", id)
 	}
 
 	return nil
