@@ -166,6 +166,14 @@ func UpdateUser(id uint, user *models.User) error {
 		return errors.New("branch_id does not exist")
 	}
 
+	// Retrieve the current user data (to compare roles)
+	var currentRole string
+	err = config.DB.QueryRow("SELECT role FROM users WHERE id = ?", id).Scan(&currentRole)
+	if err != nil {
+		log.Println("Error retrieving current user role:", err)
+		return err
+	}
+
 	// Hash the password if it's not empty (meaning it's being updated)
 	if user.Password != "" {
 		hashedPassword, err := helpers.HashingPasswordFunc(user.Password)
@@ -190,20 +198,33 @@ func UpdateUser(id uint, user *models.User) error {
 		}
 	}()
 
-	// Prepare the SQL query
-	var query string
+	// Prepare the SQL query and execute
 	if user.Image != "" {
-		query = "UPDATE users SET full_name = ?, email = ?, password = ?, role = ?, image = ?, branch_id = ? WHERE id = ?"
-		_, err := tx.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Image, user.BranchId, id)
+		query := "UPDATE users SET full_name = ?, email = ?, password = ?, role = ?, image = ?, branch_id = ? WHERE id = ?"
+		_, err = tx.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.Image, user.BranchId, id)
+	} else {
+		query := "UPDATE users SET full_name = ?, email = ?, password = ?, role = ?, branch_id = ? WHERE id = ?"
+		_, err = tx.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.BranchId, id)
+	}
+
+	if err != nil {
+		log.Println("Error updating user:", err)
+		return err
+	}
+
+	// Compare old role with the new role and update total_officer accordingly
+	if currentRole != "officer" && user.Role == "officer" {
+		// If user is promoted to officer
+		_, err = tx.Exec("UPDATE total_data SET total_officer = total_officer + 1 WHERE id = 1")
 		if err != nil {
-			log.Println("Error updating user:", err)
+			log.Println("Error increasing total_officer:", err)
 			return err
 		}
-	} else {
-		query = "UPDATE users SET full_name = ?, email = ?, password = ?, role = ?, branch_id = ? WHERE id = ?"
-		_, err := tx.Exec(query, user.FullName, user.Email, user.Password, user.Role, user.BranchId, id)
+	} else if currentRole == "officer" && user.Role != "officer" {
+		// If user is demoted from officer
+		_, err = tx.Exec("UPDATE total_data SET total_officer = total_officer - 1 WHERE id = 1")
 		if err != nil {
-			log.Println("Error updating user:", err)
+			log.Println("Error decreasing total_officer:", err)
 			return err
 		}
 	}

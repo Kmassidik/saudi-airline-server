@@ -56,7 +56,7 @@ func TotalDataBranchDashboard() ([]models.BranchData, error) {
 
 func DataOfficerDashboard(limit uint, offset uint) ([]models.DashboardUsers, error) {
 	// Prepare the SQL query to select the desired fields
-	query := "SELECT full_name, likes, dislikes FROM users WHERE role = 'officer' ORDER BY likes DESC LIMIT $1 OFFSET $2"
+	query := "SELECT full_name, likes, dislikes FROM users WHERE role = 'officer' ORDER BY likes DESC LIMIT ? OFFSET ?"
 	rows, err := config.DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
@@ -83,6 +83,18 @@ func DataOfficerDashboard(limit uint, offset uint) ([]models.DashboardUsers, err
 }
 
 func UpdateDashboard(branchId uint, voteType string) error {
+	// Begin a transaction
+	tx, err := config.DB.Begin()
+	if err != nil {
+		log.Println("Error starting transaction:", err)
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback() // Rollback on error
+		}
+	}()
+
 	var (
 		totalUpdateQuery  string
 		branchUpdateQuery string
@@ -92,21 +104,27 @@ func UpdateDashboard(branchId uint, voteType string) error {
 	switch voteType {
 	case "like":
 		totalUpdateQuery = `UPDATE total_data SET total_likes = total_likes + 1, total_voted = total_voted + 1 WHERE id = 1`
-		branchUpdateQuery = `UPDATE total_data_branch SET total_likes = total_likes + 1 WHERE branch_id = $1`
+		branchUpdateQuery = `UPDATE total_data_branch SET total_likes = total_likes + 1 WHERE branch_id = ?`
 	case "dislike":
 		totalUpdateQuery = `UPDATE total_data SET total_dislikes = total_dislikes + 1, total_voted = total_voted + 1 WHERE id = 1`
-		branchUpdateQuery = `UPDATE total_data_branch SET total_dislikes = total_dislikes + 1 WHERE branch_id = $1`
+		branchUpdateQuery = `UPDATE total_data_branch SET total_dislikes = total_dislikes + 1 WHERE branch_id = ?`
 	default:
 		return fmt.Errorf("invalid vote type")
 	}
-	// Execute total_data update
-	if _, err := config.DB.Exec(totalUpdateQuery); err != nil {
+
+	// Execute total_data update within transaction
+	if _, err := tx.Exec(totalUpdateQuery); err != nil {
 		return fmt.Errorf("failed to update total_data: %v", err)
 	}
 
-	// Execute total_data_branch update
-	if _, err := config.DB.Exec(branchUpdateQuery, branchId); err != nil {
+	// Execute total_data_branch update within transaction
+	if _, err := tx.Exec(branchUpdateQuery, branchId); err != nil {
 		return fmt.Errorf("failed to update total_data_branch: %v", err)
+	}
+
+	// Commit the transaction if no errors occurred
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
 	return nil
