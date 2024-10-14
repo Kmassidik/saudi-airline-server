@@ -8,7 +8,7 @@ import (
 
 // CreateBranchCounter creates a new branch counter
 func CreateBranchCounter(branchCounter *models.BranchCounter) error {
-	_, err := config.DB.Exec("INSERT INTO branch_counters (counter_location, user_id, branch_id) VALUES ($1, $2, $3)",
+	_, err := config.DB.Exec("INSERT INTO branch_counters (counter_location, user_id, branch_id) VALUES (?, ?, ?)",
 		branchCounter.CounterLocation, branchCounter.UserID, branchCounter.BranchID)
 
 	if err != nil {
@@ -31,7 +31,7 @@ func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, erro
         FROM branch_counters bc
         JOIN branch_offices bo ON bc.branch_id = bo.id
         JOIN users u ON bc.user_id = u.id
-        WHERE bc.branch_id = $1
+        WHERE bc.branch_id = ?
     `
 
 	rows, err := config.DB.Query(query, id) // Use Query instead of Exec for SELECT statements
@@ -61,6 +61,6 @@ func GetBranchCountersByBranchID(id uint) ([]models.BranchCounterWithNames, erro
 
 // DeleteBranchCounter deletes a branch counter by ID
 func DeleteBranchCounter(id uint) error {
-	_, err := config.DB.Exec("DELETE FROM branch_counters WHERE id = $1", id)
+	_, err := config.DB.Exec("DELETE FROM branch_counters WHERE id = ?", id)
 	return err
 }
