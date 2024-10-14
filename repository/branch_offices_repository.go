@@ -12,7 +12,8 @@ import (
 func GetAllBranchOffices(limit, offset int) ([]models.BranchOfficeResponse, error) {
 	var branchOffices []models.BranchOfficeResponse
 
-	rows, err := config.DB.Query("SELECT id, name, address, total_counter FROM branch_offices ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
+	// MySQL uses ? as a placeholder
+	rows, err := config.DB.Query("SELECT id, name, address, total_counter FROM branch_offices ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		log.Println("Error querying branch offices:", err)
 		return nil, err
@@ -31,9 +32,11 @@ func GetAllBranchOffices(limit, offset int) ([]models.BranchOfficeResponse, erro
 	return branchOffices, nil
 }
 
+// GetAllBranchOfficesOption retrieves all branch offices for options
 func GetAllBranchOfficesOption() ([]models.BranchOfficeOptionResponse, error) {
 	var branchOffices []models.BranchOfficeOptionResponse
 
+	// MySQL uses ? as a placeholder
 	rows, err := config.DB.Query("SELECT id, name FROM branch_offices ORDER BY id ASC")
 	if err != nil {
 		log.Println("Error querying branch offices:", err)
@@ -69,10 +72,9 @@ func GetBranchOfficesCount() (int, error) {
 func GetBranchOfficesById(id uint) (*models.BranchOfficeResponse, error) {
 	var branchOffice models.BranchOfficeResponse
 
-	row := config.DB.QueryRow("SELECT id, name, address, total_counter FROM branch_offices WHERE id = $1", id)
+	row := config.DB.QueryRow("SELECT id, name, address, total_counter FROM branch_offices WHERE id = ?", id)
 	err := row.Scan(&branchOffice.ID, &branchOffice.Name, &branchOffice.Address, &branchOffice.TotalCounter)
 	if err != nil {
-		log.Println("Error querying branch office by ID:", err)
 		return nil, errors.New("branch office not found")
 	}
 
@@ -88,20 +90,27 @@ func CreateBranchOffice(branchOffice *models.BranchOfficeCreateRequest) error {
 	}
 	defer tx.Rollback() // Rollback in case of an error
 
-	var branchID int
-	// Insert the branch office and retrieve the generated ID
-	err = tx.QueryRow(
-		"INSERT INTO branch_offices (name, address, total_counter) VALUES ($1, $2, $3) RETURNING id",
+	// Insert the branch office
+	_, err = tx.Exec(
+		"INSERT INTO branch_offices (name, address, total_counter) VALUES (?, ?, ?)",
 		branchOffice.Name, branchOffice.Address, branchOffice.TotalCounter,
-	).Scan(&branchID)
+	)
 	if err != nil {
 		log.Println("Error creating branch office:", err)
 		return err
 	}
 
+	// Get the last inserted ID
+	var branchID int
+	err = tx.QueryRow("SELECT LAST_INSERT_ID()").Scan(&branchID)
+	if err != nil {
+		log.Println("Error getting last inserted ID:", err)
+		return err
+	}
+
 	// Insert into total_data_branch using the generated branch ID
 	_, err = tx.Exec(
-		"INSERT INTO total_data_branch (name_office, total_likes, total_dislikes, branch_id) VALUES ($1, $2, $3, $4)",
+		"INSERT INTO total_data_branch (name_office, total_likes, total_dislikes, branch_id) VALUES (?, ?, ?, ?)",
 		branchOffice.Name, 0, 0, branchID,
 	)
 	if err != nil {
@@ -120,18 +129,23 @@ func CreateBranchOffice(branchOffice *models.BranchOfficeCreateRequest) error {
 
 // UpdateBranchOffices updates an existing branch office by ID
 func UpdateBranchOffices(id uint, branchOffice *models.BranchOfficeCreateRequest) error {
-	_, err := config.DB.Exec("UPDATE branch_offices SET name = $1, address = $2, total_counter = $3 WHERE id = $4",
+	result, err := config.DB.Exec("UPDATE branch_offices SET name = ?, address = ?, total_counter = ? WHERE id = ?",
 		branchOffice.Name, branchOffice.Address, branchOffice.TotalCounter, id)
 	if err != nil {
 		log.Println("Error updating branch office:", err)
 		return err
 	}
+
+	if rowsAffected, _ := result.RowsAffected(); rowsAffected == 0 {
+		return fmt.Errorf("no branch office found with the given ID: %d", id)
+	}
+
 	return nil
 }
 
 // DeleteBranchOffices deletes a branch office by ID
 func DeleteBranchOffices(id uint) error {
-	result, err := config.DB.Exec("DELETE FROM branch_offices WHERE id = $1", id)
+	result, err := config.DB.Exec("DELETE FROM branch_offices WHERE id = ?", id)
 	if err != nil {
 		log.Println("Error deleting branch office:", err)
 		return err

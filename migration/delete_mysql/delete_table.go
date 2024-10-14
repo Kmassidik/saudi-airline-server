@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
+	_ "github.com/go-sql-driver/mysql" // Use MySQL driver
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -21,12 +21,11 @@ func main() {
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
-	dbSslMode := os.Getenv("DB_SSLMODE")
-	dbHost := os.Getenv("DB_HOST") // Host of the PostgreSQL server
+	dbHost := os.Getenv("DB_HOST") // Host of the MySQL server
 
-	// Connect to default PostgreSQL database
-	connStr := fmt.Sprintf("user=%s password=%s dbname=postgres sslmode=%s host=%s", dbUser, dbPassword, dbSslMode, dbHost)
-	db, err := sql.Open("postgres", connStr)
+	// Connect to the MySQL server
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:3306)/", dbUser, dbPassword, dbHost) // Connect to MySQL without a specific database
+	db, err := sql.Open("mysql", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +45,7 @@ func main() {
 
 // databaseExists checks if the database exists
 func databaseExists(db *sql.DB, dbName string) bool {
-	query := fmt.Sprintf("SELECT 1 FROM pg_database WHERE datname = '%s'", dbName)
+	query := fmt.Sprintf("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '%s'", dbName)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatalf("Error checking if database exists: %v\n", err)
@@ -58,7 +57,7 @@ func databaseExists(db *sql.DB, dbName string) bool {
 // deleteDatabase deletes an existing database
 func deleteDatabase(db *sql.DB, dbName string) error {
 	// Drop the database
-	_, err := db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName))
+	_, err := db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", dbName)) // Use backticks for database name
 	if err != nil {
 		return fmt.Errorf("error dropping database: %w", err)
 	}

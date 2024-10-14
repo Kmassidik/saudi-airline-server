@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 
+	_ "github.com/go-sql-driver/mysql" // Use MySQL driver
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
 )
 
 var DB *sql.DB
@@ -26,14 +26,13 @@ func InitDatabase() {
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
-	dbSslMode := os.Getenv("DB_SSLMODE")
 	dbHost := os.Getenv("DB_HOST")
 
-	// Define the connection string for PostgreSQL
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s", dbHost, dbUser, dbPassword, dbName, dbSslMode)
+	// Define the connection string for MySQL
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s", dbUser, dbPassword, dbHost, dbName)
 
 	// Open the database connection
-	DB, err = sql.Open("postgres", dsn)
+	DB, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
