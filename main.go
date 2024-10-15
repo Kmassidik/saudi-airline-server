@@ -4,6 +4,7 @@ import (
 	"api-server/config"
 	"api-server/middlewares"
 	"api-server/routes"
+	"fmt"
 	"time"
 
 	"github.com/gin-contrib/cors" // Import the cors package
@@ -11,6 +12,9 @@ import (
 )
 
 func main() {
+	// Set Gin to release mode
+	gin.SetMode(gin.ReleaseMode)
+
 	// Initialize the database
 	config.InitDatabase()
 
@@ -19,17 +23,19 @@ func main() {
 
 	// Apply CORS middleware
 	r.Use(cors.New(cors.Config{
-		// AllowOrigins:     []string{"http://localhost:5173"},                   // Specify allowed origin
-		AllowOrigins:     []string{"*"},                                       // Specify allowed origin
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Allow these HTTP methods
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},        // Allow specific headers
-		ExposeHeaders:    []string{"Content-Length"},                          // Expose headers if needed
-		AllowCredentials: true,                                                // Allow cookies/authentication headers
-		MaxAge:           12 * time.Hour,                                      // Cache preflight requests for 12 hours
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// Apply the global error handler middleware
 	r.Use(middlewares.ErrorHandler())
+
+	// Apply the concurrent request limit middleware
+	r.Use(middlewares.LimitConcurrentRequests())
 
 	// Serve static files from the "public/images" directory
 	r.Static("/images", "./public/images")
@@ -37,6 +43,9 @@ func main() {
 
 	routes.SetupRoutes(r)
 
+	fmt.Println("Server Running")
+
 	// Start the server
 	r.Run(":3000")
+
 }
